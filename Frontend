@@ -1,0 +1,3759 @@
+### `frontend\src\components\admin\AddVehicleTab.jsx`
+
+```javascript
+import React, { useState } from 'react';
+import { Box, TextField, Button, Paper, Typography, Grid, Alert, CircularProgress } from '@mui/material';
+import { adminCreateVehicle } from '../../api';
+import { v4 as uuidv4 } from 'uuid';
+
+const vehicleFormFields = [
+  { name: 'vehicle_id', label: 'ID Машины (UUID)*', type: 'text', required: true, helperText: "Генерируется автоматически, можно изменить." },
+  { name: 'brand', label: 'Бренд*', type: 'text', required: true },
+  { name: 'model', label: 'Модель', type: 'text' },
+  { name: 'body_type', label: 'Тип кузова*', type: 'text', required: true },
+  { name: 'year', label: 'Год выпуска*', type: 'number', required: true },
+  { name: 'gearbox', label: 'Коробка передач*', type: 'text', required: true },
+  { name: 'drive', label: 'Привод*', type: 'text', required: true },
+  { name: 'power_hp', label: 'Мощность (л.с.)*', type: 'number', required: true },
+  { name: 'seats', label: 'Количество мест*', type: 'number', required: true },
+  { name: 'price_per_day_usd', label: 'Цена за день (USD)*', type: 'number', inputProps: { step: "0.01" }, required: true },
+  { name: 'image_url', label: 'URL изображения', type: 'text' },
+];
+
+const generateInitialFormState = () => {
+    const initialState = vehicleFormFields.reduce((acc, field) => {
+      acc[field.name] = '';
+      return acc;
+    }, {});
+    initialState.vehicle_id = uuidv4();
+    return initialState;
+};
+
+
+export default function AddVehicleTab() {
+  const [form, setForm] = useState(generateInitialFormState());
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = fieldName => e => {
+    setForm(f => ({ ...f, [fieldName]: e.target.value }));
+  };
+
+  const handleGenerateNewId = () => {
+    setForm(f => ({ ...f, vehicle_id: uuidv4() }));
+  };
+  
+  const resetForm = () => {
+    setForm(generateInitialFormState());
+    setStatus(null);
+  }
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setLoading(true);
+    setStatus(null);
+
+    const payload = {
+      ...form,
+      year: parseInt(form.year, 10),
+      power_hp: parseInt(form.power_hp, 10),
+      seats: parseInt(form.seats, 10),
+      price_per_day_usd: parseFloat(form.price_per_day_usd),
+    };
+    
+    delete payload.helperText; 
+
+    for (const field of vehicleFormFields) {
+        if (field.required && (payload[field.name] === '' || payload[field.name] === null || payload[field.name] === undefined)) {
+            setStatus({ type: 'error', msg: `Поле "${field.label}" обязательно для заполнения.` });
+            setLoading(false);
+            return;
+        }
+        if (field.type === 'number' && field.required && isNaN(payload[field.name])) {
+            setStatus({ type: 'error', msg: `Поле "${field.label}" должно быть числом.` });
+            setLoading(false);
+            return;
+        }
+    }
+    if (!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(payload.vehicle_id)) {
+        setStatus({ type: 'error', msg: 'ID Машины должен быть в формате UUID (например, xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).' });
+        setLoading(false);
+        return;
+    }
+
+    try {
+      const newVehicle = await adminCreateVehicle(payload);
+      setStatus({ type: 'success', msg: `Машина "${newVehicle.brand} ${newVehicle.model || ''}" (ID: ${newVehicle.vehicle_id}) успешно добавлена!` });
+      resetForm();
+    } catch (e) {
+      console.error("Error adding vehicle:", e);
+      setStatus({ type: 'error', msg: e.response?.data?.error || 'Ошибка при добавлении машины.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Paper sx={{ p: {xs: 2, md:3}, borderRadius: 2 }} elevation={2}>
+      <Typography variant="h6" component="h2" gutterBottom sx={{fontWeight: 'medium', mb: 2}}>
+        Добавить новый автомобиль
+      </Typography>
+      <Box component="form" onSubmit={handleSubmit} sx={{ '& .MuiTextField-root': { mb: 2 } }}>
+        <Grid container spacing={2}>
+          {vehicleFormFields.map(field => (
+            // Убрали item, передаем размеры напрямую
+            <Grid 
+                key={field.name}
+                xs={12} 
+                sm={6} 
+                md={field.name === 'vehicle_id' || field.name === 'image_url' ? 12 : 4} 
+            >
+              <TextField
+                name={field.name}
+                label={field.label}
+                type={field.type}
+                value={form[field.name]}
+                onChange={handleChange(field.name)}
+                fullWidth
+                required={field.required}
+                variant="outlined"
+                InputProps={field.inputProps}
+                size="small"
+                helperText={field.helperText}
+                {...(field.name === 'vehicle_id' && {
+                    InputProps: {
+                        endAdornment: (
+                            <Button onClick={handleGenerateNewId} size="small" sx={{whiteSpace: 'nowrap'}}>
+                                Новый ID
+                            </Button>
+                        ),
+                    },
+                })}
+              />
+            </Grid>
+          ))}
+        </Grid>
+        <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+            <Button type="submit" variant="contained" color="primary" disabled={loading} size="large">
+            {loading ? <CircularProgress size={24} color="inherit" /> : 'Добавить машину'}
+            </Button>
+            <Button type="button" variant="outlined" onClick={resetForm} disabled={loading}>
+                Очистить форму
+            </Button>
+        </Box>
+        {status && (
+          <Alert severity={status.type} sx={{ mt: 3 }} onClose={() => setStatus(null)}>
+            {status.msg}
+          </Alert>
+        )}
+      </Box>
+    </Paper>
+  );
+}
+```
+
+### `frontend\src\components\admin\UsersTab.jsx`
+
+```javascript
+import React, { useEffect, useState } from 'react';
+import {
+  TableContainer, Table, TableHead, TableBody, TableRow, TableCell, Paper,
+  IconButton, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Box,
+  Typography, Alert, CircularProgress, Select, MenuItem, FormControl, InputLabel
+} from '@mui/material';
+import { Edit, Delete } from '@mui/icons-material';
+import { adminGetUsers, adminUpdateUser, adminDeleteUser } from '../../api';
+import { useAuth } from '../../contexts/AuthContext';
+
+export default function UsersTab() {
+  const { user: currentUser } = useAuth();
+  const [users, setUsers] = useState([]);
+  const [editingUser, setEditingUser] = useState(null);
+  const [form, setForm] = useState({ id: null, username: '', role: 'user', password: '' });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [actionError, setActionError] = useState('');
+
+  const loadUsers = () => {
+    setLoading(true);
+    setError('');
+    adminGetUsers()
+      .then(data => {
+        if (Array.isArray(data)) {
+          setUsers(data);
+        } else {
+          setUsers([]);
+          setError("Не удалось получить список пользователей в ожидаемом формате.");
+        }
+      })
+      .catch(err => {
+        console.error("Error loading users:", err);
+        setError(err.response?.data?.error || "Ошибка загрузки пользователей.");
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const openEditDialog = u => {
+    setEditingUser(u);
+    setForm({ id: u.id, username: u.username, role: u.role, password: '' });
+    setActionError('');
+  };
+
+  const closeEditDialog = () => {
+    setEditingUser(null);
+    setForm({ id: null, username: '', role: 'user', password: '' });
+    setActionError('');
+  };
+
+  const handleFormChange = (field) => (event) => {
+    setForm(f => ({ ...f, [field]: event.target.value }));
+  };
+
+  const handleSaveChanges = async () => {
+    if (!editingUser) return;
+    setActionError('');
+
+    const payload = {
+      username: form.username,
+      role: form.role,
+    };
+    if (form.password) {
+      payload.password = form.password;
+    }
+
+    try {
+      await adminUpdateUser(editingUser.id, payload);
+      closeEditDialog();
+      loadUsers();
+    } catch (err) {
+      console.error("Error updating user:", err);
+      setActionError(err.response?.data?.error || "Ошибка при сохранении пользователя.");
+    }
+  };
+
+  const handleDeleteUser = async (userId, userRole) => {
+    setActionError('');
+    if (currentUser && userId === parseInt(currentUser.id)) {
+        setActionError('Вы не можете удалить свою собственную учетную запись.');
+        if (window.confirm('Вы не можете удалить свою собственную учетную запись.')) {
+        }
+        return;
+    }
+
+    if (window.confirm(`Вы уверены, что хотите удалить пользователя ID: ${userId}? Это действие необратимо.`)) {
+      try {
+        await adminDeleteUser(userId);
+        loadUsers();
+      } catch (err) {
+        console.error("Error deleting user:", err);
+        setError(err.response?.data?.error || `Ошибка при удалении пользователя ID: ${userId}.`);
+      }
+    }
+  };
+
+  if (loading) {
+    return <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}><CircularProgress /></Box>;
+  }
+
+  if (error) {
+    return <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>;
+  }
+
+  return (
+    <>
+      <TableContainer component={Paper} elevation={2}>
+        <Table sx={{ minWidth: 650 }} aria-label="users table">
+          <TableHead sx={{ backgroundColor: 'grey.100' }}>
+            <TableRow>
+              <TableCell>ID</TableCell>
+              <TableCell>Логин</TableCell>
+              <TableCell>Роль</TableCell>
+              <TableCell align="right">Действия</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {users.map(u => (
+              <TableRow
+                key={u.id}
+                sx={{ '&:last-child td, &:last-child th': { border: 0 }, '&:hover': {backgroundColor: 'action.hover'} }}
+              >
+                <TableCell component="th" scope="row">{u.id}</TableCell>
+                <TableCell>{u.username}</TableCell>
+                <TableCell>
+                    <Typography 
+                        variant="body2" 
+                        sx={{ 
+                            fontWeight: 'medium', 
+                            color: u.role === 'admin' ? 'primary.main' : 'text.secondary'
+                        }}
+                    >
+                        {u.role}
+                    </Typography>
+                </TableCell>
+                <TableCell align="right">
+                  <IconButton onClick={() => openEditDialog(u)} color="primary" aria-label={`редактировать пользователя ${u.username}`}>
+                    <Edit fontSize="small"/>
+                  </IconButton>
+                  <IconButton 
+                    onClick={() => handleDeleteUser(u.id, u.role)} 
+                    color="error" 
+                    aria-label={`удалить пользователя ${u.username}`}
+                    disabled={currentUser && u.id === parseInt(currentUser.id)}
+                  >
+                    <Delete fontSize="small"/>
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <Dialog open={!!editingUser} onClose={closeEditDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Редактировать пользователя {editingUser ? `"${editingUser.username}" (ID: ${editingUser.id})` : ''}</DialogTitle>
+        <DialogContent>
+          <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            {actionError && <Alert severity="error" onClose={() => setActionError('')}>{actionError}</Alert>}
+            <TextField
+              label="Логин"
+              fullWidth
+              value={form.username}
+              onChange={handleFormChange('username')}
+              variant="outlined"
+            />
+            <TextField
+              label="Новый пароль (оставьте пустым, чтобы не менять)"
+              type="password"
+              fullWidth
+              value={form.password}
+              onChange={handleFormChange('password')}
+              variant="outlined"
+              helperText="Если указан, пароль пользователя будет изменен."
+            />
+            <FormControl fullWidth variant="outlined">
+                <InputLabel id="role-select-label">Роль</InputLabel>
+                <Select
+                    labelId="role-select-label"
+                    label="Роль"
+                    value={form.role}
+                    onChange={handleFormChange('role')}
+                >
+                    <MenuItem value="user">User</MenuItem>
+                    <MenuItem value="admin">Admin</MenuItem>
+                </Select>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{p: '16px 24px'}}>
+          <Button onClick={closeEditDialog}>Отмена</Button>
+          <Button onClick={handleSaveChanges} variant="contained" color="primary">Сохранить</Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+}
+```
+
+### `frontend\src\components\admin\VehiclesTab.jsx`
+
+```javascript
+import React, { useEffect, useState, useMemo } from 'react';
+import {
+  TableContainer, Table, TableHead, TableBody, TableRow, TableCell, Paper,
+  IconButton, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Box,
+  Typography, Alert, CircularProgress, InputAdornment, Link
+} from '@mui/material';
+import { Edit, Delete, Search as SearchIcon, Link as LinkIcon, BrokenImage as BrokenImageIcon } from '@mui/icons-material';
+import { adminGetVehicles, adminUpdateVehicle, adminDeleteVehicle } from '../../api';
+
+const vehicleFieldsConfig = [
+  { name: 'brand', label: 'Бренд*', type: 'text', required: true },
+  { name: 'model', label: 'Модель', type: 'text' },
+  { name: 'body_type', label: 'Тип кузова*', type: 'text', required: true },
+  { name: 'year', label: 'Год выпуска*', type: 'number', required: true },
+  { name: 'gearbox', label: 'Коробка передач*', type: 'text', required: true },
+  { name: 'drive', label: 'Привод*', type: 'text', required: true },
+  { name: 'power_hp', label: 'Мощность (л.с.)*', type: 'number', required: true },
+  { name: 'seats', label: 'Количество мест*', type: 'number', required: true },
+  { name: 'price_per_day_usd', label: 'Цена за день (USD)*', type: 'number', inputProps: { step: "0.01" }, required: true },
+  { name: 'image_url', label: 'URL изображения', type: 'text' },
+];
+
+const initialDialogFormState = vehicleFieldsConfig.reduce((acc, field) => {
+  acc[field.name] = '';
+  return acc;
+}, {});
+
+
+export default function VehiclesTab() {
+  const [vehicles, setVehicles] = useState([]);
+  const [editingVehicle, setEditingVehicle] = useState(null);
+  const [form, setForm] = useState(initialDialogFormState);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [actionStatus, setActionStatus] = useState(null);
+
+
+  const loadVehicles = () => {
+    setLoading(true);
+    setError('');
+    adminGetVehicles()
+      .then(data => {
+        if (Array.isArray(data)) {
+          setVehicles(data);
+        } else {
+          setVehicles([]);
+          setError("Не удалось получить список машин в ожидаемом формате.");
+        }
+      })
+      .catch(err => {
+        console.error("Error loading vehicles:", err);
+        setError(err.response?.data?.error || "Ошибка загрузки списка машин.");
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadVehicles();
+  }, []);
+
+  const openEditDialog = v => {
+    setEditingVehicle(v);
+    const formValues = {};
+    for (const field of vehicleFieldsConfig) {
+        formValues[field.name] = v[field.name] !== undefined && v[field.name] !== null ? String(v[field.name]) : '';
+    }
+    setForm(formValues);
+    setActionStatus(null);
+  };
+
+  const closeEditDialog = () => {
+    setEditingVehicle(null);
+    setForm(initialDialogFormState);
+    setActionStatus(null);
+  };
+
+  const handleFormChange = fieldName => e => {
+    setForm(f => ({ ...f, [fieldName]: e.target.value }));
+  };
+
+  const handleSaveChanges = async () => {
+    if (!editingVehicle) return;
+    setActionStatus(null);
+
+    const payload = { ...form };
+    for (const field of vehicleFieldsConfig) {
+        if (field.type === 'number') {
+            const numValue = parseFloat(payload[field.name]);
+            if (isNaN(numValue) && field.required) {
+                 setActionStatus({type: 'error', msg: `Поле "${field.label}" обязательно и должно быть числом.`});
+                 return;
+            }
+            payload[field.name] = isNaN(numValue) ? (field.required ? 0 : null) : numValue;
+        }
+         if (field.required && (payload[field.name] === '' || payload[field.name] === null || payload[field.name] === undefined)) {
+            setActionStatus({type: 'error', msg: `Поле "${field.label}" обязательно для заполнения.`});
+            return;
+        }
+    }
+    payload.year = parseInt(payload.year, 10);
+    payload.power_hp = parseInt(payload.power_hp, 10);
+    payload.seats = parseInt(payload.seats, 10);
+
+    try {
+      await adminUpdateVehicle(editingVehicle.vehicle_id, payload);
+      setActionStatus({type: 'success', msg: 'Изменения успешно сохранены!'});
+      closeEditDialog();
+      loadVehicles();
+    } catch (err) {
+      console.error("Error updating vehicle:", err);
+      setActionStatus({type: 'error', msg: err.response?.data?.error || "Ошибка при сохранении изменений."});
+    }
+  };
+
+  const handleDeleteVehicle = async (vehicleId) => {
+    setActionStatus(null);
+    setError('');
+    if (window.confirm(`Вы уверены, что хотите удалить машину ID: ${vehicleId}?`)) {
+      try {
+        await adminDeleteVehicle(vehicleId);
+        setActionStatus({type: 'success', msg: `Машина ID: ${vehicleId} успешно удалена.`});
+        loadVehicles();
+      } catch (err) {
+        console.error("Error deleting vehicle:", err);
+        setActionStatus({type: 'error', msg: err.response?.data?.error || `Ошибка при удалении машины ID: ${vehicleId}.`});
+      }
+    }
+  };
+
+  const filteredVehicles = useMemo(() => {
+    if (!searchTerm.trim()) return vehicles;
+    const lowerSearchTerm = searchTerm.toLowerCase().trim();
+    return vehicles.filter(v =>
+      (String(v.vehicle_id).toLowerCase() || '').includes(lowerSearchTerm) ||
+      (v.brand?.toLowerCase() || '').includes(lowerSearchTerm) ||
+      (v.model?.toLowerCase() || '').includes(lowerSearchTerm) ||
+      (String(v.year) || '').includes(lowerSearchTerm)
+    );
+  }, [vehicles, searchTerm]);
+
+  if (loading) {
+    return <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}><CircularProgress /></Box>;
+  }
+
+  if (error && vehicles.length === 0) {
+    return <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>;
+  }
+
+  return (
+    <>
+      <Paper sx={{ mb: 2, p: 2, borderRadius: 2 }} elevation={1}>
+        <TextField
+          fullWidth
+          variant="outlined"
+          placeholder="Поиск по ID, бренду, модели или году..."
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon color="action" />
+              </InputAdornment>
+            ),
+             endAdornment: searchTerm ? (
+              <InputAdornment position="end">
+                <IconButton onClick={() => setSearchTerm('')} size="small">
+                  <Delete fontSize="small" />
+                </IconButton>
+              </InputAdornment>
+            ) : null,
+          }}
+          size="small"
+        />
+      </Paper>
+      {actionStatus && (
+        <Alert severity={actionStatus.type} sx={{ mb: 2 }} onClose={() => setActionStatus(null)}>
+          {actionStatus.msg}
+        </Alert>
+      )}
+      {error && vehicles.length > 0 &&
+        <Alert severity="warning" sx={{ mb: 2 }} onClose={() => setError('')}>
+            Ошибка при последнем обновлении списка: {error}. Отображаются ранее загруженные данные.
+        </Alert>
+      }
+      <TableContainer component={Paper} elevation={2} sx={{borderRadius: 2}}>
+        <Table sx={{ minWidth: 750 }} aria-label="vehicles table">
+          <TableHead sx={{ backgroundColor: 'grey.100' }}>
+            <TableRow>
+              <TableCell sx={{width: '20%'}}>ID</TableCell>
+              <TableCell>Бренд</TableCell>
+              <TableCell>Модель</TableCell>
+              <TableCell>Год</TableCell>
+              <TableCell>Изображение</TableCell>
+              <TableCell align="right">Действия</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredVehicles.map(v => (
+              <TableRow 
+                key={v.vehicle_id}
+                sx={{ '&:last-child td, &:last-child th': { border: 0 }, '&:hover': {backgroundColor: 'action.hover'} }}
+              >
+                <TableCell sx={{fontSize: '0.75rem', wordBreak: 'break-all'}}>{v.vehicle_id}</TableCell>
+                <TableCell>{v.brand}</TableCell>
+                <TableCell>{v.model || '-'}</TableCell>
+                <TableCell>{v.year}</TableCell>
+                <TableCell>
+                  {v.image_url ? (
+                    <Link href={v.image_url} target="_blank" rel="noopener noreferrer" sx={{display: 'inline-flex', alignItems: 'center'}}>
+                      <LinkIcon fontSize="small" sx={{mr: 0.5}}/>
+                      <Typography variant="caption">Ссылка</Typography>
+                    </Link>
+                  ) : (
+                    <BrokenImageIcon fontSize="small" color="disabled" titleAccess="Нет изображения"/>
+                  )}
+                </TableCell>
+                <TableCell align="right">
+                  <IconButton onClick={() => openEditDialog(v)} color="primary" aria-label={`редактировать машину ${v.brand} ${v.model}`}>
+                    <Edit fontSize="small"/>
+                  </IconButton>
+                  <IconButton onClick={() => handleDeleteVehicle(v.vehicle_id)} color="error" aria-label={`удалить машину ${v.brand} ${v.model}`}>
+                    <Delete fontSize="small"/>
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+             {filteredVehicles.length === 0 && !loading && (
+                <TableRow>
+                    <TableCell colSpan={6} align="center">
+                        <Typography color="textSecondary" sx={{p:3}}>
+                            {searchTerm ? "Машины не найдены по вашему запросу." : "Список машин пуст."}
+                        </Typography>
+                    </TableCell>
+                </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <Dialog open={!!editingVehicle} onClose={closeEditDialog} maxWidth="md" fullWidth>
+        <DialogTitle>
+            Редактировать машину {editingVehicle ? `"${editingVehicle.brand} ${editingVehicle.model || ''}" (ID: ${editingVehicle.vehicle_id})` : ''}
+        </DialogTitle>
+        <DialogContent>
+          {actionStatus && actionStatus.type === 'error' && !actionStatus.msg.includes('успешно') && (
+            <Alert severity="error" sx={{gridColumn: '1 / -1', mb:2}} onClose={() => setActionStatus(null)}>{actionStatus.msg}</Alert>
+          )}
+          {/* Внутри DialogContent для формы используется Box, а не Grid, поэтому там нет item */}
+          <Box component="form" sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' , md: '1fr 1fr 1fr'}, gap: 2, pt: 1 }}>
+            {vehicleFieldsConfig.map(field => (
+                 <TextField
+                    key={field.name}
+                    name={field.name}
+                    label={field.label}
+                    type={field.type}
+                    value={form[field.name]}
+                    onChange={handleFormChange(field.name)}
+                    fullWidth
+                    required={field.required}
+                    variant="outlined"
+                    InputProps={field.inputProps}
+                    size="small"
+                 />
+            ))}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{p: '16px 24px'}}>
+          <Button onClick={closeEditDialog}>Отмена</Button>
+          <Button onClick={handleSaveChanges} variant="contained" color="primary">Сохранить</Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+}
+```
+
+### `frontend\src\components\Navbar.jsx`
+
+```javascript
+import React from 'react';
+import { Link as RouterLink, NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  Box,
+  Container,
+  useMediaQuery,
+  IconButton,
+  Menu,
+  MenuItem,
+  Link as MuiLink,
+  Divider
+} from '@mui/material';
+import MenuIcon from '@mui/icons-material/Menu';
+import { useTheme } from '@mui/material/styles';
+
+export default function Navbar() {
+  const { user, logout: authLogout } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [anchorElNav, setAnchorElNav] = React.useState(null);
+  const navigate = useNavigate();
+
+  const handleOpenNavMenu  = e => setAnchorElNav(e.currentTarget);
+  const handleCloseNavMenu = () => setAnchorElNav(null);
+
+  const handleLogout = () => {
+    authLogout();
+    navigate('/');
+  };
+
+  const navItems = [
+    { label: 'Каталог',            path: '/',                      requiresAuth: false, exact: true },
+    { label: 'Мои Рекомендации',   path: '/recommendations/personal', requiresAuth: true },
+    { label: 'Корзина',            path: '/cart',                  requiresAuth: true },
+    { label: 'История',            path: '/history',               requiresAuth: true },
+    { label: 'Мои отзывы',         path: '/reviews',               requiresAuth: true },
+    {
+      label: 'Админ-панель',
+      path: '/admin',
+      requiresAuth: true,
+      requiresAdmin: true
+    },
+  ];
+
+  const authNavItems = [
+    { label: 'Войти',     path: '/login',    requiresGuest: true },
+    { label: 'Регистрация', path: '/register', requiresGuest: true },
+  ];
+
+  const NavButton = ({ to, children, exact }) => (
+    <Button
+      component={NavLink}
+      to={to}
+      end={exact}
+      sx={{
+        my: 2, mx: 1,
+        color: theme.palette.customNavbar?.text || theme.palette.common.white,
+        display: 'block',
+        position: 'relative',
+        '&.active': {
+          color: theme.palette.customNavbar?.activeText || theme.palette.error.main,
+          fontWeight: 'bold',
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            bottom: '-2px',
+            left: '8px',
+            right: '8px',
+            height: '3px',
+            backgroundColor: theme.palette.customNavbar?.activeText || theme.palette.error.main,
+            borderRadius: '2px',
+          }
+        }
+      }}
+    >
+      {children}
+    </Button>
+  );
+
+  const renderNavLinks = (item, isMobileMenu = false) => {
+    if (item.requiresAdmin && (!user || user.role !== 'admin')) {
+      return null;
+    }
+    if ((item.requiresAuth && !user) || (item.requiresGuest && user)) {
+      return null;
+    }
+
+    if (isMobileMenu) {
+      return (
+        <MenuItem
+          key={item.label}
+          component={NavLink}
+          to={item.path}
+          end={item.exact}
+          onClick={handleCloseNavMenu}
+          sx={{
+            '&.active': {
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              color: theme.palette.customNavbar?.activeText || theme.palette.error.main,
+              fontWeight: 'bold'
+            },
+            color: theme.palette.text.primary
+          }}
+        >
+          <Typography textAlign="center">{item.label}</Typography>
+        </MenuItem>
+      );
+    }
+    return <NavButton key={item.label} to={item.path} exact={item.exact}>{item.label}</NavButton>;
+  };
+
+  return (
+    <AppBar position="sticky" sx={{ bgcolor: theme.palette.customNavbar?.background || theme.palette.primary.main }}>
+      <Container maxWidth="xl">
+        <Toolbar disableGutters sx={{ px: { xs: 1, sm: 2 } }}>
+          <MuiLink
+            component={RouterLink}
+            to="/"
+            underline="none"
+            sx={{ display: 'flex', alignItems: 'center', mr: { xs: 1, md: 2 } }}
+          >
+            <Typography
+              variant={isMobile ? 'h6' : 'h5'}
+              color={theme.palette.customNavbar?.activeText || theme.palette.error.main}
+              sx={{ fontWeight: 'bold', letterSpacing: '0.5px' }}
+            >
+              VehicleRental
+            </Typography>
+          </MuiLink>
+
+          <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' }, justifyContent: 'center' }}>
+            {navItems.map(item => renderNavLinks(item, false))}
+          </Box>
+
+          {isMobile && <Box sx={{ flexGrow: 1 }} />} {/* Растягивает пространство на мобильных, чтобы иконка меню была справа */}
+
+          <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 0.5 }}>
+            {!user
+              ? authNavItems.map(item => renderNavLinks(item, false))
+              : (
+                <Button
+                  onClick={handleLogout}
+                  variant="outlined"
+                  size="small"
+                  sx={{
+                    fontWeight: 'medium',
+                    borderColor: theme.palette.customNavbar?.text || theme.palette.common.white,
+                    color: theme.palette.customNavbar?.text || theme.palette.common.white,
+                    '&:hover': {
+                      borderColor: theme.palette.error.light,
+                      backgroundColor: 'rgba(239, 68, 68, 0.08)'
+                    }
+                  }}
+                >
+                  Выйти
+                </Button>
+              )
+            }
+          </Box>
+
+          {/* Мобильное меню */}
+          <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center' }}>
+            {user && isMobile && (
+              <Button
+                onClick={handleLogout}
+                variant="outlined"
+                size="small"
+                sx={{
+                  mr: 1,
+                  borderColor: theme.palette.customNavbar?.text || theme.palette.common.white,
+                  color: theme.palette.customNavbar?.text || theme.palette.common.white,
+                }}
+              >
+                Выйти
+              </Button>
+            )}
+            <IconButton
+              size="large"
+              aria-label="меню навигации"
+              aria-controls="menu-appbar"
+              aria-haspopup="true"
+              onClick={handleOpenNavMenu}
+              color="inherit"
+            >
+              <MenuIcon />
+            </IconButton>
+            <Menu
+              id="menu-appbar"
+              anchorEl={anchorElNav}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              keepMounted
+              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+              open={Boolean(anchorElNav)}
+              onClose={handleCloseNavMenu}
+              sx={{
+                display: { xs: 'block', md: 'none' },
+              }}
+            >
+              {navItems.map(item => renderNavLinks(item, true))}
+              {/* Разделитель и кнопки Войти/Регистрация, если пользователь не авторизован */}
+              {(!user && authNavItems.length > 0 && navItems.filter(i => !(i.requiresAuth && !user) && !(i.requiresAdmin && (!user || user.role !== 'admin')) ).length > 0) && (
+                 <Divider sx={{ my: 1 }} />
+              )}
+              {!user && authNavItems.map(item => renderNavLinks(item, true))}
+            </Menu>
+          </Box>
+        </Toolbar>
+      </Container>
+    </AppBar>
+  );
+}
+```
+
+### `frontend\src\components\ProtectedRoute.jsx`
+
+```javascript
+import React from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { Box, CircularProgress, Typography } from '@mui/material';
+
+export default function ProtectedRoute({ children }) {
+  const { user, loadingAuth } = useAuth();
+  const location = useLocation();
+
+  if (loadingAuth) {
+    return (
+      <Box
+        className="min-h-screen flex flex-col justify-center items-center bg-gray-50"
+      >
+        <CircularProgress />
+        <Typography variant="body2" className="mt-2 text-gray-600">
+          Checking authentication...
+        </Typography>
+      </Box>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return <>{children}</>;
+}
+
+```
+
+### `frontend\src\components\Recommendations.jsx`
+
+```javascript
+import React, { useEffect, useState } from 'react';
+import { getGeneralRecommendations } from '../api';
+import VehicleCard from './VehicleCard';
+import { Box, Typography, Grid, Container } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+
+export default function Recommendations() {
+  const theme = useTheme();
+  const [recs, setRecs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    setError(false);
+
+    getGeneralRecommendations()
+      .then(data => {
+        if (mounted) {
+          if (Array.isArray(data)) {
+            setRecs(data);
+          } else {
+            console.error("General recommendations data is not an array:", data);
+            setRecs([]);
+          }
+        }
+      })
+      .catch(err => {
+        if (mounted) {
+          console.error("Error fetching general recommendations:", err);
+          setError(true);
+          setRecs([]);
+        }
+      })
+      .finally(() => {
+        if (mounted) {
+          setLoading(false);
+        }
+      });
+      
+      return () => {
+          mounted = false;
+      }
+  }, []);
+
+  if (loading || error || !recs.length) {
+    return null;
+  }
+
+  return (
+    <Box
+      component="section"
+      sx={{
+        py: { xs: 4, md: 6 },
+        mt: { xs: 4, md: 6 },
+        borderTop: `1px solid ${theme.palette.divider}`,
+      }}
+    >
+      <Container maxWidth="xl"> {/* Используем xl для согласованности с Home */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: { xs: 3, md: 5 } }}>
+          <AutoAwesomeIcon sx={{ color: theme.palette.primary.main, fontSize: {xs: '1.8rem', md: '2rem'}, mr: 1 }} />
+          <Typography
+            variant="h4"
+            component="h2"
+            align="center"
+            sx={{
+              fontWeight: 'bold',
+              color: theme.palette.text.primary,
+            }}
+          >
+            Вам также может понравиться
+          </Typography>
+        </Box>
+
+        <Grid container spacing={{ xs: 2, sm: 3, md: 4 }}>
+          {recs.map(v => (
+            <Grid item key={v.vehicle_id} xs={12} sm={6} md={4} lg={3}> {/* lg=3 для 4х карточек */}
+              <VehicleCard vehicle={v} />
+            </Grid>
+          ))}
+        </Grid>
+      </Container>
+    </Box>
+  );
+}
+```
+
+### `frontend\src\components\ReviewForm.jsx`
+
+```javascript
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Rating,
+  Paper,
+  CircularProgress,
+  Collapse
+} from '@mui/material';
+
+export default function ReviewForm({
+  vehicleId,
+  orderId,
+  existingReview,
+  onSaved,
+  onDeleted,
+  hideAddButton = false,
+  vehicleBrand,
+  vehicleModel
+}) {
+  const [ratingValue, setRatingValue] = useState(0);
+  const [comment, setComment] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const isNew = !existingReview || !existingReview.id;
+
+  useEffect(() => {
+    if (existingReview) {
+      setRatingValue(existingReview.rating ?? 0);
+      setComment(existingReview.comment || '');
+      if (hideAddButton) {
+        setEditing(true);
+        setShowForm(true);
+      } else {
+        setEditing(false);
+        setShowForm(!!existingReview.id);
+      }
+    } else {
+      setRatingValue(0);
+      setComment('');
+      setEditing(false);
+      setShowForm(false);
+    }
+  }, [existingReview, hideAddButton]);
+
+
+  const handleToggleEdit = () => {
+    if (editing && existingReview && !isNew) {
+      setRatingValue(existingReview.rating);
+      setComment(existingReview.comment);
+    } else if (!editing && isNew) {
+      setRatingValue(0);
+      setComment('');
+    }
+    setEditing(!editing);
+    setShowForm(true);
+  };
+
+  const handleCancel = () => {
+    if (existingReview && !isNew) {
+      setRatingValue(existingReview.rating);
+      setComment(existingReview.comment);
+      setEditing(false);
+      setShowForm(true);
+    } else {
+      setRatingValue(0);
+      setComment('');
+      setEditing(false);
+      setShowForm(false);
+    }
+  };
+
+  const handleSubmit = async e => {
+    e.preventDefault();
+    if (ratingValue === 0 || ratingValue === null) {
+      alert("Пожалуйста, поставьте оценку.");
+      return;
+    }
+    setLoading(true);
+    const payload = {
+      vehicle_id: vehicleId,
+      order_id: orderId,
+      rating: ratingValue,
+      comment: comment,
+    };
+    if (!isNew && existingReview?.id) {
+      payload.id = existingReview.id;
+    }
+
+    try {
+      await onSaved(payload, isNew);
+      if (isNew) {
+        setEditing(false);
+      } else {
+        setEditing(false);
+      }
+    } catch (err) {
+      console.error("ReviewForm: Error during submit", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!existingReview || !existingReview.id) return;
+    setLoading(true);
+    try {
+      await onDeleted(existingReview.id);
+      setRatingValue(0);
+      setComment('');
+      setEditing(false);
+      setShowForm(false);
+    } catch (err) {
+       console.error("ReviewForm: Error during delete", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!editing && showForm && existingReview && !isNew && !hideAddButton) {
+    return (
+      <Paper variant="outlined" sx={{ p: 2, mt: hideAddButton ? 0 : 1, bgcolor: 'grey.50' }}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+          {/* existingReview.rating уже должен быть 1-5 */}
+          <Rating value={existingReview.rating} readOnly precision={0.5} />
+          <Button size="small" onClick={handleToggleEdit} disabled={loading}>
+            Редактировать
+          </Button>
+        </Box>
+        <Typography variant="body2" sx={{ whiteSpace: 'pre-line', color: 'text.secondary' }}>
+          {existingReview.comment || <em>Нет комментария</em>}
+        </Typography>
+      </Paper>
+    );
+  }
+  
+  if (!editing && !showForm && !hideAddButton) {
+    return (
+      <Button
+        size="small"
+        variant="outlined"
+        color="primary"
+        onClick={handleToggleEdit}
+        disabled={loading}
+      >
+        Оставить отзыв
+      </Button>
+    );
+  }
+
+
+  return (
+    <Collapse in={showForm || editing} timeout="auto" unmountOnExit={!existingReview && !editing}>
+      <Paper
+        variant="outlined"
+        sx={{
+          p: { xs: 1.5, sm: 2 },
+          mt: hideAddButton ? 0 : 1,
+          bgcolor: 'background.paper'
+        }}
+      >
+        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium' }}>
+          {isNew ? `Ваш отзыв о ${vehicleBrand || ''} ${vehicleModel || ''}` : `Редактировать отзыв`}
+        </Typography>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Box sx={{ my: 1.5 }}>
+            <Typography variant="caption" component="div" color="text.secondary" sx={{ mb: 0.5 }}>
+              Ваша оценка (от 1 до 5 звезд):
+            </Typography>
+            <Rating
+              name={`rating-${orderId}-${vehicleId}`}
+              value={ratingValue} 
+              precision={0.5}   
+              onChange={(_, newValue) => {
+                setRatingValue(newValue); 
+              }}
+              sx={{ color: 'warning.main' }}
+            />
+            {/* Проверка на 0 или null, если вы решите использовать null для "не выбрано" */}
+            {(ratingValue === 0 || ratingValue === null) && (
+              <Typography variant="caption" color="error" sx={{display: 'block'}}>
+                Оценка обязательна
+              </Typography>
+            )}
+          </Box>
+
+          <TextField
+            label="Комментарий (опционально)"
+            multiline
+            rows={3}
+            fullWidth
+            value={comment}
+            onChange={e => setComment(e.target.value)}
+            variant="outlined"
+            size="small"
+          />
+
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              disabled={loading || ratingValue === 0 || ratingValue === null} 
+              startIcon={loading && <CircularProgress size={16} color="inherit" />}
+            >
+              {isNew ? 'Опубликовать отзыв' : 'Сохранить изменения'}
+            </Button>
+            <Button onClick={handleCancel} disabled={loading} variant="text">
+              Отмена
+            </Button>
+            {existingReview && !isNew && (
+              <Button
+                variant="text"
+                color="error"
+                onClick={handleDelete}
+                disabled={loading}
+                startIcon={loading && <CircularProgress size={16} color="inherit" />}
+                sx={{ ml: 'auto' }}
+              >
+                Удалить
+              </Button>
+            )}
+          </Box>
+        </form>
+      </Paper>
+    </Collapse>
+  );
+}
+```
+
+### `frontend\src\components\SearchFilter.jsx`
+
+```javascript
+import React from 'react';
+import {
+  Paper,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Grid,
+  Box
+} from '@mui/material';
+
+export default function SearchFilter({ filters, onChange, brands, years }) {
+  const handleChange = (field) => (event) =>
+    onChange({ ...filters, [field]: event.target.value });
+
+  return (
+    <Paper className="p-6 mb-8" elevation={1}>
+      <Grid container spacing={4}>
+        <Grid item xs={12} md={4}>
+          <TextField
+            label="Поиск"
+            placeholder="Марка, модель..."
+            fullWidth
+            variant="outlined"
+            value={filters.search}
+            onChange={handleChange('search')}
+          />
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <FormControl fullWidth variant="outlined">
+            <InputLabel>Марка</InputLabel>
+            <Select
+              label="Марка"
+              value={filters.brand}
+              onChange={handleChange('brand')}
+            >
+              <MenuItem value="">
+                <em>Все марки</em>
+              </MenuItem>
+              {brands.map(b => (
+                <MenuItem key={b} value={b}>
+                  {b}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <FormControl fullWidth variant="outlined">
+            <InputLabel>Год</InputLabel>
+            <Select
+              label="Год"
+              value={filters.year}
+              onChange={handleChange('year')}
+            >
+              <MenuItem value="">
+                <em>Все года</em>
+              </MenuItem>
+              {years.map(y => (
+                <MenuItem key={y} value={y}>
+                  {y}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+      </Grid>
+    </Paper>
+  );
+}
+
+```
+
+### `frontend\src\components\VehicleCard.jsx`
+
+```javascript
+import React from 'react';
+import { Link as RouterLink } from 'react-router-dom';
+import {
+  Card,
+  CardMedia,
+  CardContent,
+  Typography,
+  Box,
+  Rating,
+} from '@mui/material';
+import { styled, useTheme } from '@mui/material/styles';
+
+const USD_TO_RUB = parseFloat(import.meta.env.VITE_USD_TO_RUB_RATE || "80.6");
+
+const StyledCardMedia = styled(CardMedia)(({ theme }) => ({
+  height: 200,
+  backgroundColor: theme.palette.grey[200],
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: theme.palette.grey[500],
+  position: 'relative',
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
+}));
+
+const PriceOverlay = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  bottom: 10,
+  left: 10,
+  backgroundColor: theme.palette.primary.main,
+  color: theme.palette.primary.contrastText,
+  padding: '5px 10px',
+  borderRadius: theme.shape.borderRadius,
+  zIndex: 1,
+  fontWeight: 'bold',
+  fontSize: '0.9rem',
+  boxShadow: theme.shadows[2],
+}));
+
+const InfoBar = styled(Box)(({ theme }) => ({
+  backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : theme.palette.grey[100],
+  color: theme.palette.text.secondary,
+  padding: '8px 12px',
+  display: 'flex',
+  justifyContent: 'space-around',
+  alignItems: 'center',
+  fontSize: '0.75rem',
+}));
+
+const InfoBarItem = styled(Typography)({
+    textAlign: 'center',
+});
+
+
+export default function VehicleCard({ vehicle }) {
+  const theme = useTheme();
+
+  if (!vehicle) {
+    return null;
+  }
+
+  const placeholderImage = '/placeholder-car.png';
+  const imageUrlToUse = vehicle.image_url || placeholderImage;
+
+  const priceRub = parseFloat(vehicle.price_per_day_usd) * USD_TO_RUB;
+
+  const infoBarItems = [
+    vehicle.year,
+    vehicle.gearbox,
+    vehicle.drive,
+    `${vehicle.power_hp} лс`,
+  ];
+
+  return (
+    <Card
+      component={RouterLink}
+      to={`/vehicles/${vehicle.vehicle_id}`}
+      sx={{
+        textDecoration: 'none',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        borderRadius: theme.shape.borderRadius,
+        transition: 'box-shadow 0.25s ease-in-out, transform 0.2s ease-in-out',
+        backgroundColor: theme.palette.background.paper,
+        '&:hover': {
+          boxShadow: theme.shadows[6],
+          transform: 'translateY(-4px)',
+        },
+        overflow: 'hidden',
+      }}
+    >
+      <StyledCardMedia
+        image={imageUrlToUse}
+        title={`${vehicle.brand} ${vehicle.model || ''} - фото`}
+      >
+        <PriceOverlay>
+          {new Intl.NumberFormat('ru-RU', {
+            style: 'currency',
+            currency: 'RUB',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          }).format(priceRub)}
+           <span style={{fontSize: '0.7rem', opacity: 0.9, marginLeft: '2px'}}>/день</span>
+        </PriceOverlay>
+      </StyledCardMedia>
+
+      <InfoBar>
+        {infoBarItems.map((item, index) => (
+            <React.Fragment key={index}>
+                <InfoBarItem variant="caption">{item}</InfoBarItem>
+                {index < infoBarItems.length - 1 && (
+                    <span style={{opacity: 0.4, margin: '0 4px'}}>|</span>
+                )}
+            </React.Fragment>
+        ))}
+      </InfoBar>
+
+      <CardContent sx={{ textAlign: 'left', p: 1.5, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+        <Typography
+          variant="h6"
+          component="h3"
+          sx={{
+            fontWeight: '600',
+            color: theme.palette.text.primary,
+            mb: 0.5,
+            lineHeight: 1.3,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            minHeight: '2.6em'
+          }}
+          title={`${vehicle.brand} ${vehicle.model || ''}`}
+        >
+          {vehicle.brand} {vehicle.model || ''}
+        </Typography>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', mt: 'auto', pt: 0.5 }}>
+          {vehicle.review_count != null && vehicle.review_count > 0 && vehicle.avg_rating != null ? (
+            <>
+              {/* ИСПРАВЛЕНО: Убрано деление на 2 */}
+              <Rating value={parseFloat(vehicle.avg_rating)} precision={0.5} readOnly size="small" />
+              <Typography variant="caption" sx={{ ml: 0.5, color: 'text.secondary', lineHeight: 1 }}>
+                ({vehicle.review_count})
+              </Typography>
+            </>
+          ) : (
+            <Typography variant="caption" color="text.disabled" sx={{fontStyle: 'italic', lineHeight: 1}}>
+              Нет отзывов
+            </Typography>
+          )}
+        </Box>
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+### `frontend\src\contexts\AuthContext.jsx`
+
+```javascript
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import { setAuthToken, login as apiLogin, register as apiRegister } from '../api';
+import { jwtDecode } from 'jwt-decode';
+
+const AuthContext = createContext();
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+
+  const performLogout = useCallback(() => {
+    setAuthToken(null);
+    setUser(null);
+    console.log("AuthContext: User logged out, state and token cleared.");
+  }, []);
+
+  useEffect(() => {
+    console.log("AuthContext: useEffect for initial token check triggered.");
+    setLoadingAuth(true);
+    const token = localStorage.getItem('token');
+    if (token) {
+      setAuthToken(token);
+      try {
+        const decodedToken = jwtDecode(token);
+        const currentTime = Date.now() / 1000;
+
+        if (decodedToken.exp < currentTime) {
+          console.warn("AuthContext: Token expired.");
+          performLogout();
+        } else {
+          setUser({ id: decodedToken.sub, role: decodedToken.role });
+          console.log("AuthContext: User state set from token:", { id: decodedToken.sub, role: decodedToken.role });
+        }
+      } catch (error) {
+        console.error("AuthContext: Error decoding token:", error);
+        performLogout();
+      }
+    } else {
+      console.log("AuthContext: No token found in localStorage.");
+    }
+    setLoadingAuth(false);
+  }, [performLogout]);
+
+  const login = async (creds) => {
+    console.log("AuthContext: login function called with creds:", creds);
+    try {
+      const { token } = await apiLogin(creds);
+      setAuthToken(token);
+      const decodedToken = jwtDecode(token);
+      setUser({ id: decodedToken.sub, role: decodedToken.role });
+      console.log("AuthContext: User state updated after successful login:", { id: decodedToken.sub, role: decodedToken.role });
+    } catch (error) {
+      console.error("AuthContext: Error during login:", error.response?.data || error.message);
+      performLogout();
+      throw error;
+    }
+  };
+
+  const register = async (creds) => {
+    console.log("AuthContext: register function called with creds:", creds);
+    try {
+      await apiRegister(creds);
+      console.log("AuthContext: Registration successful.");
+      await login(creds);
+      console.log("AuthContext: Auto-login after registration successful.");
+    } catch (error) {
+      console.error("AuthContext: Error during registration or auto-login:", error.response?.data || error.message);
+      performLogout();
+      throw error;
+    }
+  };
+
+  const logout = () => {
+    performLogout();
+  };
+
+
+  return (
+    <AuthContext.Provider value={{ user, setUser, login, register, logout, loadingAuth }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => useContext(AuthContext);
+```
+
+### `frontend\src\pages\AdminPanel.jsx`
+
+```javascript
+import React, { useState, useEffect } from 'react';
+import { Box, Tabs, Tab, Container, Typography, CircularProgress, Alert } from '@mui/material';
+import UsersTab from '../components/admin/UsersTab';
+import VehiclesTab from '../components/admin/VehiclesTab';
+import AddVehicleTab from '../components/admin/AddVehicleTab';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import PeopleIcon from '@mui/icons-material/People';
+import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+
+
+export default function AdminPanel() {
+  const [tabIndex, setTabIndex] = useState(0);
+  const { user, loadingAuth } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loadingAuth && (!user || user.role !== 'admin')) {
+      navigate('/');
+    }
+  }, [user, loadingAuth, navigate]);
+
+  const handleChange = (_, newIndex) => setTabIndex(newIndex);
+
+  if (loadingAuth) {
+    return (
+        <Container maxWidth="lg" sx={{ py: 4, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight:'300px' }}>
+            <CircularProgress />
+        </Container>
+    );
+  }
+
+  if (!user || user.role !== 'admin') {
+    return (
+        <Container maxWidth="lg" sx={{ py: 4 }}>
+            <Alert severity="error" sx={{p:2}}>
+                <Typography variant="h6">Доступ запрещен.</Typography>
+                <Typography>Эта страница предназначена только для администраторов.</Typography>
+            </Alert>
+        </Container>
+    );
+  }
+
+  const adminTabs = [
+    { label: "Пользователи", icon: <PeopleIcon />, component: <UsersTab /> },
+    { label: "Каталог машин", icon: <DirectionsCarIcon />, component: <VehiclesTab /> },
+    { label: "Добавить машину", icon: <AddCircleOutlineIcon />, component: <AddVehicleTab /> }
+  ];
+
+  return (
+    <Container maxWidth="xl" sx={{ py: { xs: 2, md: 3 } }}>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', mb: {xs: 2, md: 3} }}>
+        Панель администратора
+      </Typography>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: {xs: 2, md: 3} }}>
+        <Tabs 
+            value={tabIndex} 
+            onChange={handleChange} 
+            aria-label="admin panel tabs"
+            variant="scrollable"
+            scrollButtons="auto"
+        >
+          {adminTabs.map((tab, index) => (
+            <Tab 
+                key={index}
+                label={tab.label} 
+                icon={tab.icon}
+                iconPosition="start"
+                id={`admin-tab-${index}`} 
+                aria-controls={`admin-tabpanel-${index}`} 
+            />
+          ))}
+        </Tabs>
+      </Box>
+      
+      {adminTabs.map((tab, index) => (
+        <Box 
+            key={index}
+            role="tabpanel" 
+            hidden={tabIndex !== index} 
+            id={`admin-tabpanel-${index}`} 
+            aria-labelledby={`admin-tab-${index}`}
+            sx={{pt: tabIndex === index ? 1 : 0}}
+        >
+          {tabIndex === index && tab.component}
+        </Box>
+      ))}
+    </Container>
+  );
+}
+```
+
+### `frontend\src\pages\Cart.jsx`
+
+```javascript
+import React, { useState, useEffect, useCallback } from 'react';
+import { getCart, removeFromCart, checkout } from '../api';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import {
+  Container,
+  Paper,
+  Typography,
+  List,
+  ListItem,
+  ListItemAvatar,
+  Avatar,
+  ListItemText,
+  IconButton,
+  Divider,
+  Box,
+  Button,
+  Alert,
+  CircularProgress,
+  Tooltip
+} from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import ShoppingCartCheckoutIcon from '@mui/icons-material/ShoppingCartCheckout';
+import ProductionQuantityLimitsIcon from '@mui/icons-material/ProductionQuantityLimits';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useTheme } from '@mui/material/styles';
+
+const USD_TO_RUB = 80.6;
+
+export default function Cart() {
+  const theme = useTheme();
+  const [items, setItems] = useState([]);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [checkingOut, setCheckingOut] = useState(false);
+  const navigate = useNavigate();
+
+  const loadCart = useCallback(() => {
+    setLoading(true);
+    setError('');
+    getCart()
+      .then(data => {
+        if (Array.isArray(data)) {
+          setItems(data);
+        } else {
+          setItems([]);
+          setError('Получены некорректные данные корзины.');
+        }
+      })
+      .catch(err => {
+        setError('Не удалось загрузить корзину. Попробуйте обновить страницу.');
+        console.error("Error loading cart:", err);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    loadCart();
+  }, [loadCart]);
+
+  const handleRemove = async (vehicleId) => {
+    if (!vehicleId) return;
+    try {
+      const updatedCartItems = await removeFromCart(vehicleId);
+      setItems(updatedCartItems);
+    } catch (err) {
+      setError('Ошибка при удалении товара из корзины.');
+      console.error("Error removing from cart:", err);
+    }
+  };
+
+  const handleCheckout = async () => {
+    setCheckingOut(true);
+    setError('');
+    try {
+      await checkout();
+      navigate('/history', { state: { orderPlaced: true } });
+    } catch (err) {
+      setError(err.response?.data?.error || 'Ошибка при оформлении заказа. Пожалуйста, попробуйте еще раз.');
+      console.error("Error during checkout:", err);
+    } finally {
+      setCheckingOut(false);
+    }
+  };
+
+  const totalUsd = items.reduce((sum, i) => sum + parseFloat(i.price_per_day_usd || 0), 0);
+  const totalRub = totalUsd * USD_TO_RUB;
+
+  if (loading) {
+    return (
+      <Box className="flex justify-center items-center py-20 min-h-[calc(100vh-200px)]">
+        <CircularProgress size={60} />
+      </Box>
+    );
+  }
+
+  return (
+    <Container maxWidth="lg" sx={{ py: { xs: 3, md: 5 }, bgcolor: 'background.default' }}>
+      <Typography
+        variant="h3"
+        component="h1"
+        align="center"
+        gutterBottom
+        sx={{ mb: { xs: 3, md: 5 }, fontWeight: 'bold', color: theme.palette.text.primary }}
+      >
+        Ваша корзина
+      </Typography>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3, width: '100%' }} onClose={() => setError('')}>
+          {error}
+        </Alert>
+      )}
+
+      {items.length === 0 && !loading ? (
+        <Paper
+          elevation={3}
+          sx={{
+            py: { xs: 4, md: 6 },
+            px: { xs: 2, md: 4 },
+            textAlign: 'center',
+            borderRadius: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2,
+            bgcolor: '#ffffff'
+          }}
+        >
+          <ProductionQuantityLimitsIcon sx={{ fontSize: 50, color: theme.palette.text.secondary }} />
+          <Typography variant="h5" color="text.primary" sx={{ mb: 1 }}>
+            Ваша корзина пуста
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+            Похоже, вы еще ничего не добавили. Давайте это исправим!
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            size="large"
+            component={RouterLink}
+            to="/"
+            startIcon={<ArrowBackIcon />}
+            sx={{ py: 1.5, px: 3, fontWeight: 'bold' }}
+          >
+            Перейти в каталог
+          </Button>
+        </Paper>
+      ) : (
+        <Paper elevation={3} sx={{ borderRadius: 2, overflow: 'hidden', bgcolor: '#ffffff' }}>
+          <List disablePadding>
+            {items.map((item, index) => {
+              const priceRubItem = parseFloat(item.price_per_day_usd || 0) * USD_TO_RUB;
+              const itemImageUrl = item.vehicle?.imageUrl || `/placeholder-small.png`;
+
+              return (
+                <React.Fragment key={item.vehicle_id}>
+                  <ListItem
+                    sx={{
+                      py: 2.5,
+                      px: { xs: 2, sm: 3 },
+                      '&:hover': { bgcolor: theme.palette.action.hover }
+                    }}
+                    secondaryAction={
+                      <Tooltip title="Удалить из корзины">
+                        <IconButton
+                          edge="end"
+                          aria-label="удалить товар"
+                          onClick={() => handleRemove(item.vehicle_id)}
+                          sx={{ color: theme.palette.error.main }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    }
+                  >
+                    <ListItemAvatar sx={{ mr: 2 }}>
+                      <Avatar
+                        variant="rounded"
+                        src={itemImageUrl}
+                        alt={`${item.brand} ${item.model}`}
+                        sx={{ width: 70, height: 70, bgcolor: theme.palette.grey[200], border: `1px solid ${theme.palette.divider}` }}
+                      >
+                        {!itemImageUrl && (item.brand?.charAt(0) || '?')}
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={
+                        <Typography variant="h6" component="span" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+                          {item.brand} {item.model}
+                        </Typography>
+                      }
+                      secondary={
+                        <Typography variant="body1" color="text.secondary"> {/* Сделал body1 для цены */}
+                          {new Intl.NumberFormat('ru-RU', {
+                            style: 'currency',
+                            currency: 'RUB',
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          }).format(priceRubItem)} / день
+                        </Typography>
+                      }
+                    />
+                  </ListItem>
+                  {index < items.length - 1 && <Divider component="li" variant="inset" sx={{ ml: '106px' }}/>} {/* Скорректировал отступ */}
+                </React.Fragment>
+              );
+            })}
+          </List>
+
+          <Box
+            sx={{
+              p: { xs: 2, sm: 3 },
+              borderTop: 1,
+              borderColor: 'divider',
+              bgcolor: theme.palette.background.paper,
+              display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 2
+            }}
+          >
+            <Typography variant="h5" sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>
+              Итого:
+              <Typography component="span" variant="h5" color="primary.main" sx={{ ml: 1, fontWeight: 'bold' }}>
+                {new Intl.NumberFormat('ru-RU', {
+                  style: 'currency',
+                  currency: 'RUB',
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                }).format(totalRub)}
+              </Typography>
+            </Typography>
+            <Button
+              variant="contained"
+              color="primary"
+              size="large"
+              onClick={handleCheckout}
+              disabled={checkingOut || items.length === 0}
+              startIcon={checkingOut ? <CircularProgress size={24} color="inherit" /> : <ShoppingCartCheckoutIcon />}
+              sx={{ py: 1.5, px: 4, width: { xs: '100%', sm: 'auto' }, fontWeight: 'bold' }}
+            >
+              {checkingOut ? 'Оформление...' : 'Оформить заказ'}
+            </Button>
+          </Box>
+        </Paper>
+      )}
+    </Container>
+  );
+}
+```
+
+### `frontend\src\pages\History.jsx`
+
+```javascript
+import React, { useState, useEffect, useCallback } from 'react';
+import { getHistory, getReviews, postReview, updateReview, deleteReview as apiDeleteReview } from '../api';
+import ReviewForm from '../components/ReviewForm';
+import { Link as RouterLink, useLocation } from 'react-router-dom';
+import {
+  Container,
+  Typography,
+  Card,
+  CardHeader,
+  CardContent,
+  Box,
+  CircularProgress,
+  Alert,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
+  Avatar,
+  Divider,
+  Button,
+  Paper,
+  Snackbar
+} from '@mui/material';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import InventoryIcon from '@mui/icons-material/Inventory';
+import { useTheme } from '@mui/material/styles';
+
+const USD_TO_RUB = 80.6;
+
+export default function History() {
+  const theme = useTheme();
+  const [orders, setOrders] = useState([]);
+  const [reviews, setReviews] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const location = useLocation();
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [ordersData, reviewsData] = await Promise.all([getHistory(), getReviews()]);
+      if (Array.isArray(ordersData)) {
+        setOrders(ordersData);
+      } else {
+        setOrders([]);
+        console.warn("History data is not an array:", ordersData);
+      }
+      if (Array.isArray(reviewsData)) {
+        const reviewsMap = reviewsData.reduce((acc, review) => {
+          acc[`${review.order_id}_${review.vehicle_id}`] = review;
+          return acc;
+        }, {});
+        setReviews(reviewsMap);
+      } else {
+        setReviews({});
+        console.warn("Reviews data is not an array:", reviewsData);
+      }
+    } catch (err) {
+      setError('Не удалось загрузить историю заказов или отзывы.');
+      console.error("Error loading history or reviews:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+    if (location.state?.orderPlaced) {
+      setSnackbar({ open: true, message: 'Ваш заказ успешно оформлен!', severity: 'success' });
+      window.history.replaceState({}, document.title);
+    }
+  }, [loadData, location.state?.orderPlaced]);
+
+  const handleReviewSaved = async (reviewData, isNew) => {
+    try {
+      let savedReview;
+      if (isNew) {
+        savedReview = await postReview(reviewData);
+      } else {
+        savedReview = await updateReview(reviewData.id, reviewData);
+      }
+      setReviews(prev => ({
+        ...prev,
+        [`${savedReview.order_id}_${savedReview.vehicle_id}`]: savedReview
+      }));
+      setSnackbar({ open: true, message: `Отзыв успешно ${isNew ? 'оставлен' : 'обновлен'}!`, severity: 'success' });
+    } catch (err) {
+      console.error("Error saving review:", err);
+      setSnackbar({ open: true, message: `Ошибка при ${isNew ? 'сохранении' : 'обновлении'} отзыва.`, severity: 'error' });
+    }
+  };
+
+  const handleReviewDeleted = async (reviewId, orderId, vehicleId) => {
+    try {
+      await apiDeleteReview(reviewId);
+      setReviews(prev => {
+        const updated = { ...prev };
+        delete updated[`${orderId}_${vehicleId}`];
+        return updated;
+      });
+      setSnackbar({ open: true, message: 'Отзыв успешно удален!', severity: 'success' });
+    } catch (err) {
+      console.error("Error deleting review:", err);
+      setSnackbar({ open: true, message: 'Ошибка при удалении отзыва.', severity: 'error' });
+    }
+  };
+
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
+  if (loading) {
+    return (
+      <Box className="flex justify-center items-center py-20 min-h-[calc(100vh-200px)]">
+        <CircularProgress size={60} />
+      </Box>
+    );
+  }
+
+  return (
+    <Container maxWidth="lg" sx={{ py: { xs: 3, md: 5 }, bgcolor: 'background.default' }}>
+      <Typography
+        variant="h3"
+        component="h1"
+        align="center"
+        gutterBottom
+        sx={{ mb: { xs: 3, md: 5 }, fontWeight: 'bold', color: theme.palette.text.primary }}
+      >
+        История заказов
+      </Typography>
+
+      {error && (
+          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
+            {error}
+          </Alert>
+      )}
+
+      {orders.length === 0 && !loading ? (
+        <Paper
+          elevation={3}
+          sx={{
+            py: { xs: 4, md: 6 },
+            px: { xs: 2, md: 4 },
+            textAlign: 'center',
+            borderRadius: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2,
+            bgcolor: '#ffffff'
+          }}
+        >
+          <ReceiptLongIcon sx={{ fontSize: 50, color: theme.palette.text.secondary }} />
+          <Typography variant="h5" color="text.primary" sx={{ mb: 1 }}>
+            У вас пока нет заказов
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+            Сделайте свой первый заказ, и он появится здесь.
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            size="large"
+            component={RouterLink}
+            to="/"
+            sx={{ py: 1.5, px: 3, fontWeight: 'bold' }}
+          >
+            Перейти в каталог
+          </Button>
+        </Paper>
+      ) : (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 3, md: 4 } }}>
+          {orders.map(order => {
+            const orderDate = new Date(order.created_at).toLocaleString('ru-RU', {
+              year: 'numeric', month: 'long', day: 'numeric',
+              hour: '2-digit', minute: '2-digit'
+            });
+            const orderTotalRub = order.items.reduce((sum, item) => sum + (parseFloat(item.price) * USD_TO_RUB), 0);
+
+            return (
+              <Card key={order.order_id} elevation={3} sx={{ borderRadius: 2, bgcolor: '#ffffff' }}>
+                <CardHeader
+                  avatar={
+                    <Avatar sx={{ bgcolor: theme.palette.secondary.main, color: theme.palette.secondary.contrastText }}>
+                      <InventoryIcon />
+                    </Avatar>
+                  }
+                  title={
+                    <Typography variant="h6" component="div" sx={{color: theme.palette.text.primary, fontWeight: 'medium'}}>
+                      Заказ #{order.order_id}
+                    </Typography>
+                  }
+                  subheader={
+                    <Typography variant="body2" color="text.secondary">
+                      {orderDate} - Итог: {new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0 }).format(orderTotalRub)}
+                    </Typography>
+                  }
+                  sx={{ bgcolor: theme.palette.background.paper, borderBottom: '1px solid', borderColor: 'divider' }}
+                />
+                <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
+                  <List disablePadding>
+                    {order.items.map((item, itemIndex) => {
+                      const priceRubItem = parseFloat(item.price) * USD_TO_RUB;
+                      const reviewKey = `${order.order_id}_${item.vehicle_id}`;
+                      const existingReview = reviews[reviewKey];
+                      const itemImageUrl = item.vehicle?.imageUrl || '/placeholder-small.png';
+
+                      return (
+                        <React.Fragment key={item.vehicle_id}>
+                          <ListItem
+                            sx={{
+                              py: 2.5,
+                              px: { xs: 2, sm: 3 },
+                              flexDirection: { xs: 'column', sm: 'row' },
+                              alignItems: { xs: 'flex-start', sm: 'center' }
+                            }}
+                          >
+                            <ListItemAvatar sx={{ mr: {sm: 2.5}, mb: {xs: 1.5, sm: 0}, alignSelf: {xs: 'center', sm: 'flex-start'} }}>
+                               <Avatar
+                                variant="rounded"
+                                src={itemImageUrl}
+                                alt={`${item.brand} ${item.model}`}
+                                sx={{ width: 90, height: 90, bgcolor: theme.palette.grey[200], border: `1px solid ${theme.palette.divider}` }} // Увеличил аватар
+                              >
+                                {!itemImageUrl && (item.brand?.charAt(0) || '?')}
+                               </Avatar>
+                            </ListItemAvatar>
+                            <ListItemText
+                              primary={
+                                <Button
+                                  component={RouterLink}
+                                  to={`/vehicles/${item.vehicle_id}`}
+                                  variant="text"
+                                  color="primary"
+                                  sx={{ p: 0, textTransform: 'none', fontWeight: 'bold', fontSize: '1.15rem', textAlign: 'left', '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' } }}
+                                >
+                                  {item.brand} {item.model}
+                                </Button>
+                              }
+                              secondary={
+                                <Typography variant="body1" color="text.secondary">
+                                  Цена при заказе: {new Intl.NumberFormat('ru-RU', {
+                                    style: 'currency', currency: 'RUB', minimumFractionDigits: 0
+                                  }).format(priceRubItem)}
+                                </Typography>
+                              }
+                              sx={{ flexGrow: 1, mb: {xs: 2, sm: 0} }}
+                            />
+                            <Box sx={{ width: { xs: '100%', md: '350px', lg: '400px' }, mt: { xs: 1, sm: 0 }, ml: { sm: 2 } }}> {/* Задал ширину для формы отзыва */}
+                              <ReviewForm
+                                vehicleId={item.vehicle_id}
+                                orderId={order.order_id}
+                                existingReview={existingReview}
+                                onSaved={(data, isNewMode) => handleReviewSaved(data, isNewMode)}
+                                onDeleted={(reviewId) => handleReviewDeleted(reviewId, order.order_id, item.vehicle_id)}
+                                vehicleBrand={item.brand}
+                                vehicleModel={item.model}
+                              />
+                            </Box>
+                          </ListItem>
+                          {itemIndex < order.items.length - 1 && <Divider component="li" variant="middle" />}
+                        </React.Fragment>
+                      );
+                    })}
+                  </List>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </Box>
+      )}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }} variant="filled">
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Container>
+  );
+}
+```
+
+### `frontend\src\pages\Home.jsx`
+
+```javascript
+import React, { useState, useEffect } from 'react';
+import { getVehicles } from '../api';
+import VehicleCard from '../components/VehicleCard';
+import Recommendations from '../components/Recommendations';
+import {
+  Container,
+  Typography,
+  Grid,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  CircularProgress,
+  Alert,
+  Box,
+  Paper,
+  Button
+} from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+
+export default function Home() {
+  const theme = useTheme();
+  const [vehicles, setVehicles] = useState([]);
+  const [filtered, setFiltered] = useState([]);
+  const [filters, setFilters] = useState({ search: '', brand: '', year: '' });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    setError('');
+    getVehicles()
+      .then(data => {
+        if (Array.isArray(data)) {
+          setVehicles(data);
+          setFiltered(data);
+        } else {
+          setVehicles([]);
+          setFiltered([]);
+          setError('Получены некорректные данные каталога.');
+        }
+      })
+      .catch((err) => {
+        setError('Не удалось загрузить каталог. Попробуйте позже.');
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    let res = [...vehicles];
+    const searchTerm = filters.search.toLowerCase().trim();
+    const filterBrand = filters.brand;
+    const filterYear = filters.year;
+
+    if (searchTerm) {
+      res = res.filter(v =>
+        (v.brand?.toLowerCase() || '').includes(searchTerm) ||
+        (v.model?.toLowerCase() || '').includes(searchTerm) ||
+        `${v.brand?.toLowerCase()} ${v.model?.toLowerCase()}`.includes(searchTerm)
+      );
+    }
+    if (filterBrand) {
+      res = res.filter(v => v.brand === filterBrand);
+    }
+    if (filterYear) {
+      res = res.filter(v => String(v.year) === filterYear);
+    }
+    setFiltered(res);
+  }, [filters, vehicles]);
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 20, minHeight: 'calc(100vh - 200px)' }}>
+        <CircularProgress size={60} />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container maxWidth="md" sx={{ py: 4 }}>
+        <Alert severity="error" sx={{ mt: 10, textAlign: 'center' }}> {/* Убрал className */}
+          {error}
+        </Alert>
+      </Container>
+    );
+  }
+
+  const brands = [...new Set(vehicles.map(v => v.brand).filter(Boolean))].sort();
+  const years = [...new Set(vehicles.map(v => v.year).filter(Boolean))].sort((a, b) => b - a);
+
+  return (
+    <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
+      <Box sx={{ textAlign: 'center', mb: { xs: 4, md: 6 } }}>
+        <Typography
+          variant="h3"
+          component="h1"
+          sx={{
+            fontWeight: 'bold',
+            color: theme.palette.text.primary,
+            display: 'inline-block',
+            position: 'relative',
+            pb: 1,
+          }}
+        >
+          Каталог автомобилей
+          <Box
+            component="span"
+            sx={{
+              position: 'absolute',
+              bottom: 0,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '80px',
+              height: '4px',
+              backgroundColor: theme.palette.primary.main,
+              borderRadius: '2px',
+            }}
+          />
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mt: 1.5, maxWidth: '600px', mx: 'auto' }}>
+          Выберите автомобиль своей мечты из нашего широкого ассортимента. Мы предлагаем лучшие условия аренды.
+        </Typography>
+      </Box>
+
+      <Paper
+        elevation={2}
+        sx={{
+          p: { xs: 2, md: 3 },
+          mb: { xs: 4, md: 6 },
+          borderRadius: 2,
+          backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[900] : theme.palette.grey[50],
+        }}
+      >
+        <Grid container spacing={{ xs: 2, md: 3 }} alignItems="flex-end">
+          <Grid xs={12} md={5} lg={5}> {/* Убрали item */}
+            <TextField
+              label="Поиск по марке или модели"
+              fullWidth
+              variant="outlined"
+              value={filters.search}
+              onChange={e => setFilters(f => ({ ...f, search: e.target.value }))}
+              size="small"
+            />
+          </Grid>
+          <Grid xs={12} sm={6} md={3} lg={3}> {/* Убрали item */}
+            <FormControl fullWidth variant="outlined" size="small">
+              <InputLabel>Марка</InputLabel>
+              <Select
+                value={filters.brand}
+                label="Марка"
+                onChange={e => setFilters(f => ({ ...f, brand: e.target.value }))}
+              >
+                <MenuItem value="">
+                  <em>Все марки</em>
+                </MenuItem>
+                {brands.map(b => <MenuItem key={b} value={b}>{b}</MenuItem>)}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid xs={12} sm={6} md={3} lg={3}> {/* Убрали item */}
+            <FormControl fullWidth variant="outlined" size="small">
+              <InputLabel>Год выпуска</InputLabel>
+              <Select
+                value={filters.year}
+                label="Год выпуска"
+                onChange={e => setFilters(f => ({ ...f, year: e.target.value }))}
+              >
+                <MenuItem value="">
+                  <em>Все года</em>
+                </MenuItem>
+                {years.map(y => <MenuItem key={y} value={String(y)}>{y}</MenuItem>)}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid xs={12} md="auto" lg={1} sx={{display: 'flex', justifyContent: {xs: 'stretch', md: 'flex-start'}, width: {xs: '100%', md: 'auto'} }}> {/* Убрали item */}
+             <Button
+                onClick={() => setFilters({ search: '', brand: '', year: '' })}
+                variant='text'
+                color="primary" 
+                size='medium' 
+                sx={{height: '40px', width: '100%'}}
+             >
+                Сбросить
+             </Button>
+          </Grid>
+        </Grid>
+      </Paper>
+
+      {filtered.length > 0 ? (
+        <Grid container spacing={{ xs: 2, sm: 3, md: 3, lg: 3 }}>
+          {filtered.map(v => (
+            <Grid key={v.vehicle_id} xs={12} sm={6} md={4} lg={3}> {/* Убрали item */}
+              <VehicleCard vehicle={v} />
+            </Grid>
+          ))}
+        </Grid>
+      ) : (
+        !loading && (
+            <Typography align="center" color="text.secondary" variant="h6" sx={{ py: 10 }}>
+            По вашему запросу ничего не найдено. Попробуйте изменить фильтры.
+            </Typography>
+        )
+      )}
+
+      <Recommendations />
+    </Container>
+  );
+}
+```
+
+### `frontend\src\pages\Login.jsx`
+
+```javascript
+import React, { useState } from 'react';
+import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
+import {
+  Container,
+  Paper,
+  Typography,
+  TextField,
+  Button,
+  Alert,
+  Box,
+  CircularProgress,
+  Link as MuiLink,
+  Avatar
+} from '@mui/material';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '@mui/material/styles';
+
+export default function Login() {
+  const theme = useTheme();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleSubmit = async e => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      await login({ username, password });
+      const from = location.state?.from?.pathname || '/';
+      navigate(from, { replace: true });
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Неверный логин или пароль. Попробуйте снова.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 'calc(100vh - 64px - 32px)',
+        bgcolor: 'background.default',
+        py: 4,
+        px: 2,
+      }}
+    >
+      <Container component="main" maxWidth="xs"> {/* Используем component="main" для семантики */}
+        <Paper
+          elevation={6}
+          sx={{
+            p: { xs: 3, sm: 4 },
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            borderRadius: 2, 
+            bgcolor: '#ffffff' 
+          }}
+        >
+          <Avatar sx={{ m: 1, bgcolor: theme.palette.primary.main /* Красный цвет */ }}>
+            <LockOutlinedIcon />
+          </Avatar>
+          <Typography component="h1" variant="h5" sx={{ mb: 2, color: theme.palette.text.primary }}>
+            Вход в систему
+          </Typography>
+
+          {error && (
+            <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+
+          <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%', mt: 1 }}>
+            <TextField
+              label="Имя пользователя"
+              variant="outlined"
+              fullWidth
+              margin="normal"
+              required
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              disabled={loading}
+              autoFocus
+            />
+            <TextField
+              label="Пароль"
+              type="password"
+              variant="outlined"
+              fullWidth
+              margin="normal"
+              required
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              disabled={loading}
+            />
+
+            <Button
+              type="submit"
+              fullWidth
+              size="large"
+              variant="contained"
+              color="primary"
+              disabled={loading}
+              sx={{ mt: 3, mb: 2, py: 1.5, fontWeight: 'bold' }}
+            >
+              {loading ? <CircularProgress size={24} color="inherit" /> : 'Войти'}
+            </Button>
+
+            <Box sx={{ textAlign: 'center' }}>
+              <MuiLink
+                component={RouterLink}
+                to="/register"
+                variant="body2"
+                underline="hover"
+                sx={{ color: theme.palette.primary.main }}
+              >
+                Нет аккаунта? Зарегистрироваться
+              </MuiLink>
+            </Box>
+          </Box>
+        </Paper>
+      </Container>
+    </Box>
+  );
+}
+```
+
+### `frontend\src\pages\PersonalRecommendationsPage.jsx`
+
+```javascript
+import React, { useState, useEffect } from 'react';
+import { getPersonalRecommendations } from '../api';
+import VehicleCard from '../components/VehicleCard';
+import {
+  Container,
+  Typography,
+  Grid,
+  CircularProgress,
+  Alert,
+  Box,
+  Paper,
+  Button 
+} from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import { Link as RouterLink } from 'react-router-dom';
+
+export default function PersonalRecommendationsPage() {
+  const theme = useTheme();
+  const [recommendations, setRecommendations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    setError('');
+    getPersonalRecommendations()
+      .then(data => {
+        if (Array.isArray(data)) {
+          setRecommendations(data);
+        } else {
+          setRecommendations([]);
+          console.error("Received non-array data for personal recommendations:", data);
+          setError('Не удалось получить персональные рекомендации в ожидаемом формате.');
+        }
+      })
+      .catch(err => {
+        console.error("Error fetching personal recommendations:", err);
+        const errorMsg = err.response?.data?.msg || err.response?.data?.error || 'Не удалось загрузить персональные рекомендации. Попробуйте позже.';
+        setError(errorMsg);
+        setRecommendations([]);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
+      <Box sx={{ textAlign: 'center', mb: { xs: 4, md: 6 } }}>
+        <AutoAwesomeIcon sx={{ color: theme.palette.primary.main, fontSize: '2.5rem', verticalAlign: 'middle', mr: 1 }} />
+        <Typography
+          variant="h3"
+          component="h1"
+          display="inline"
+          sx={{
+            fontWeight: 'bold',
+            color: theme.palette.text.primary,
+          }}
+        >
+          Персональные Рекомендации
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mt: 1.5, maxWidth: '700px', mx: 'auto' }}>
+          Эта подборка автомобилей сформирована специально для вас на основе ваших предыдущих оценок и заказов.
+        </Typography>
+      </Box>
+
+      {loading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 10, flexDirection: 'column' }}>
+          <CircularProgress size={60} />
+          <Typography variant="h6" sx={{ mt: 2, color: 'text.secondary' }}>Подбираем лучшие предложения...</Typography>
+        </Box>
+      )}
+
+      {error && !loading && (
+        <Paper elevation={2} sx={{ p: 3, mt: 4, textAlign: 'center' }}>
+            <Alert severity="warning" icon={<AutoAwesomeIcon />} sx={{justifyContent: 'center', mb: 2}}>
+                <Typography variant="h6">{error}</Typography>
+            </Alert>
+            <Button component={RouterLink} to="/" variant="outlined">
+                Вернуться в каталог
+            </Button>
+        </Paper>
+      )}
+
+      {!loading && !error && recommendations.length === 0 && (
+        <Paper elevation={0} sx={{ p: {xs: 2, md: 4}, textAlign: 'center', backgroundColor: 'transparent', mt: 3 }}>
+          <AutoAwesomeIcon sx={{ fontSize: 60, color: theme.palette.grey[400], mb: 2 }} />
+          <Typography variant="h5" color="text.secondary" gutterBottom>
+            Пока для вас нет персональных рекомендаций
+          </Typography>
+          <Typography color="text.secondary" sx={{ mb: 3 }}>
+            Чтобы мы могли составить для вас подборку, пожалуйста, оцените несколько автомобилей или оформите свой первый заказ.
+          </Typography>
+          <Button component={RouterLink} to="/" variant="contained" color="primary">
+            Перейти в каталог
+          </Button>
+        </Paper>
+      )}
+
+      {!loading && !error && recommendations.length > 0 && (
+        <Grid container spacing={{ xs: 2, sm: 3, md: 4 }}>
+          {recommendations.map(vehicle => (
+            <Grid key={vehicle.vehicle_id} item xs={12} sm={6} md={4} lg={3}>
+              <VehicleCard vehicle={vehicle} />
+            </Grid>
+          ))}
+        </Grid>
+      )}
+    </Container>
+  );
+}
+```
+
+### `frontend\src\pages\Register.jsx`
+
+```javascript
+import React, { useState } from 'react';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import {
+  Container,
+  Paper,
+  Typography,
+  TextField,
+  Button,
+  Alert,
+  Box,
+  CircularProgress,
+  Link as MuiLink,
+  Avatar
+} from '@mui/material';
+import HowToRegIcon from '@mui/icons-material/HowToReg';
+import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '@mui/material/styles'; 
+
+export default function Register() {
+  const theme = useTheme(); 
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { register } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async e => {
+    e.preventDefault();
+    if (password.length < 4) {
+      setError('Пароль должен быть не менее 4 символов');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      await register({ username, password });
+      navigate('/', { replace: true });
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Ошибка при регистрации. Попробуйте другое имя пользователя.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 'calc(100vh - 64px - 32px)',
+        bgcolor: 'background.default', 
+        py: 4,
+        px: 2,
+      }}
+    >
+      <Container component="main" maxWidth="xs">
+        <Paper
+          elevation={6}
+          sx={{
+            p: { xs: 3, sm: 4 },
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            borderRadius: 2,
+            bgcolor: '#ffffff'
+          }}
+        >
+          <Avatar sx={{ m: 1, bgcolor: theme.palette.primary.main /* Красный цвет */ }}>
+            <HowToRegIcon />
+          </Avatar>
+          <Typography component="h1" variant="h5" sx={{ mb: 2, color: theme.palette.text.primary }}>
+            Регистрация
+          </Typography>
+
+          {error && (
+            <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+
+          <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%', mt: 1 }}>
+            <TextField
+              label="Имя пользователя"
+              variant="outlined"
+              fullWidth
+              margin="normal"
+              required
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              disabled={loading}
+              autoFocus
+            />
+            <TextField
+              label="Пароль"
+              type="password"
+              variant="outlined"
+              fullWidth
+              margin="normal"
+              required
+              helperText="Минимум 4 символа"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              disabled={loading}
+            />
+
+            <Button
+              type="submit"
+              fullWidth
+              size="large"
+              variant="contained"
+              color="primary"
+              disabled={loading}
+              sx={{ mt: 3, mb: 2, py: 1.5, fontWeight: 'bold' }}
+            >
+              {loading ? <CircularProgress size={24} color="inherit" /> : 'Зарегистрироваться'}
+            </Button>
+
+            <Box sx={{ textAlign: 'center' }}>
+              <MuiLink
+                component={RouterLink}
+                to="/login"
+                variant="body2"
+                underline="hover"
+                sx={{ color: theme.palette.primary.main }}
+              >
+                Уже есть аккаунт? Войти
+              </MuiLink>
+            </Box>
+          </Box>
+        </Paper>
+      </Container>
+    </Box>
+  );
+}
+```
+
+### `frontend\src\pages\Reviews.jsx`
+
+```javascript
+import React, { useState, useEffect, useCallback } from 'react';
+import { getReviews, updateReview, deleteReview as apiDeleteReview } from '../api';
+import ReviewForm from '../components/ReviewForm';
+import { Link as RouterLink } from 'react-router-dom';
+import {
+  Container,
+  Typography,
+  Paper,
+  Alert,
+  CircularProgress,
+  Box,
+  Button,
+  Snackbar,
+  Avatar,
+  Card,
+  CardHeader,
+  CardContent
+} from '@mui/material';
+import RateReviewIcon from '@mui/icons-material/RateReview';
+import EditNoteIcon from '@mui/icons-material/EditNote';
+import { useTheme } from '@mui/material/styles';
+
+export default function Reviews() {
+  const theme = useTheme();
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  const loadReviews = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await getReviews();
+      if (Array.isArray(data)) {
+        setReviews(data);
+      } else {
+        setReviews([]);
+        console.warn("My Reviews data is not an array:", data);
+      }
+    } catch (err) {
+      setError('Не удалось загрузить ваши отзывы.');
+      console.error("Error loading my reviews:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadReviews();
+  }, [loadReviews]);
+
+  const handleReviewSaved = async (reviewData) => {
+    try {
+      const updatedReview = await updateReview(reviewData.id, reviewData);
+      setReviews(prevReviews =>
+        prevReviews.map(r => (r.id === updatedReview.id ? updatedReview : r))
+      );
+      setSnackbar({ open: true, message: 'Отзыв успешно обновлен!', severity: 'success' });
+    } catch (err) {
+      console.error("Error updating review:", err);
+      setSnackbar({ open: true, message: 'Ошибка при обновлении отзыва.', severity: 'error' });
+    }
+  };
+
+  const handleReviewDeleted = async (reviewId) => {
+    try {
+      await apiDeleteReview(reviewId);
+      setReviews(prevReviews => prevReviews.filter(r => r.id !== reviewId));
+      setSnackbar({ open: true, message: 'Отзыв успешно удален!', severity: 'success' });
+    } catch (err) {
+      console.error("Error deleting review:", err);
+      setSnackbar({ open: true, message: 'Ошибка при удалении отзыва.', severity: 'error' });
+    }
+  };
+
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
+  if (loading) {
+    return (
+      <Box className="flex justify-center items-center py-20 min-h-[calc(100vh-200px)]">
+        <CircularProgress size={60} />
+      </Box>
+    );
+  }
+
+  return (
+    <Container maxWidth="md" sx={{ py: { xs: 3, md: 5 }, bgcolor: 'background.default' }}>
+      <Typography
+        variant="h3"
+        component="h1"
+        align="center"
+        gutterBottom
+        sx={{ mb: { xs: 3, md: 5 }, fontWeight: 'bold', color: theme.palette.text.primary }}
+      >
+        <EditNoteIcon fontSize="large" sx={{ verticalAlign: 'middle', mr: 1, color: theme.palette.primary.main }}/>
+        Мои отзывы
+      </Typography>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
+          {error}
+        </Alert>
+      )}
+
+      {reviews.length === 0 && !loading ? (
+        <Paper
+          elevation={3}
+          sx={{
+            py: { xs: 4, md: 6 },
+            px: { xs: 2, md: 4 },
+            textAlign: 'center',
+            borderRadius: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2,
+            bgcolor: '#ffffff'
+          }}
+        >
+          <RateReviewIcon sx={{ fontSize: 50, color: theme.palette.text.secondary }} />
+          <Typography variant="h5" color="text.primary" sx={{ mb: 1 }}>
+            У вас пока нет отзывов
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+            Вы можете оставить отзывы на автомобили из вашей истории заказов.
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            size="large"
+            component={RouterLink}
+            to="/history"
+            sx={{ py: 1.5, px: 3, fontWeight: 'bold' }}
+          >
+            Перейти к истории заказов
+          </Button>
+        </Paper>
+      ) : (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 2.5, md: 3.5 } }}>
+          {reviews.map(review => {
+            const vehicleName = `${review.vehicle_brand || 'Автомобиль'} ${review.vehicle_model || ''}`.trim();
+            const avatarLetter = review.vehicle_brand ? review.vehicle_brand.charAt(0).toUpperCase() : '?';
+
+            return (
+              <Card key={review.id} elevation={3} sx={{ borderRadius: 2, bgcolor: '#ffffff' }}>
+                <CardHeader
+                  avatar={
+                    <Avatar sx={{ bgcolor: theme.palette.primary.light, color: theme.palette.primary.contrastText }} aria-label="vehicle">
+                      {avatarLetter}
+                    </Avatar>
+                  }
+                  title={
+                    <Typography variant="h6" component="div" sx={{color: theme.palette.text.primary, fontWeight: 'medium'}}>
+                      {vehicleName}
+                    </Typography>
+                  }
+                  subheader={
+                    <Typography variant="body2" color="text.secondary">
+                      Отзыв от: {new Date(review.created_at).toLocaleDateString('ru-RU', {
+                        year: 'numeric', month: 'long', day: 'numeric'
+                      })}
+                    </Typography>
+                  }
+                  sx={{ bgcolor: theme.palette.background.paper, borderBottom: 1, borderColor: 'divider' }}
+                />
+                <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+                  <ReviewForm
+                    vehicleId={review.vehicle_id}
+                    orderId={review.order_id}
+                    existingReview={review}
+                    onSaved={handleReviewSaved}
+                    onDeleted={() => handleReviewDeleted(review.id)}
+                    hideAddButton={true}
+                    vehicleBrand={review.vehicle_brand}
+                    vehicleModel={review.vehicle_model}
+                  />
+                </CardContent>
+              </Card>
+            );
+          })}
+        </Box>
+      )}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }} variant="filled">
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Container>
+  );
+}
+```
+
+### `frontend\src\pages\VehicleDetail.jsx`
+
+```javascript
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
+import { getVehicle, addToCart, getVehicleReviews, getSimilarVehicleRecommendations } from '../api';
+import { useAuth } from '../contexts/AuthContext';
+import VehicleCard from '../components/VehicleCard';
+import {
+  Container,
+  Grid,
+  Typography,
+  Button,
+  CircularProgress,
+  Alert,
+  Box,
+  Divider,
+  Paper,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Avatar,
+  Rating 
+} from '@mui/material';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import EventSeatIcon from '@mui/icons-material/EventSeat';
+import SpeedIcon from '@mui/icons-material/Speed';
+import SettingsIcon from '@mui/icons-material/Settings';
+import DriveEtaIcon from '@mui/icons-material/DriveEta';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import CategoryIcon from '@mui/icons-material/Category';
+import RateReviewOutlinedIcon from '@mui/icons-material/RateReviewOutlined';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import BrokenImageIcon from '@mui/icons-material/BrokenImage';
+import { useTheme } from '@mui/material/styles';
+
+const USD_TO_RUB = parseFloat(import.meta.env.VITE_USD_TO_RUB_RATE || "80.6");
+
+export default function VehicleDetail() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
+  const theme = useTheme();
+
+  const [vehicle, setVehicle] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [similarVehicles, setSimilarVehicles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingSimilar, setLoadingSimilar] = useState(true);
+  const [cartError, setCartError] = useState('');
+  const [error, setError] = useState('');
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [mainImageError, setMainImageError] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    const controller = new AbortController();
+
+    const resetState = () => {
+        setVehicle(null);
+        setReviews([]);
+        setSimilarVehicles([]);
+        setError('');
+        setCartError('');
+        setMainImageError(false);
+    }
+
+    const fetchVehicleData = async () => {
+      if (!id) {
+          if (mounted) {
+            setError('Некорректный ID автомобиля.');
+            setLoading(false); setLoadingSimilar(false);
+          }
+          return;
+      }
+      if (mounted) {
+        setLoading(true); setLoadingSimilar(true); resetState();
+      }
+      try {
+        const [vehData, revsData, similarData] = await Promise.all([
+          getVehicle(id, { signal: controller.signal }),
+          getVehicleReviews(id, { signal: controller.signal }),
+          getSimilarVehicleRecommendations(id, { signal: controller.signal })
+        ]);
+        if (mounted) {
+          setVehicle(vehData);
+          setReviews(Array.isArray(revsData) ? revsData : []);
+          setSimilarVehicles(Array.isArray(similarData) ? similarData : []);
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') {
+        } else if (mounted) {
+          console.error("[VehicleDetail] Error fetching data:", err);
+          const errMsg = err.response?.data?.error || err.message || 'Не удалось загрузить информацию. Попробуйте позже.';
+          setError(errMsg);
+          if (err.response?.status === 404) setVehicle(null);
+        }
+      } finally {
+        if (mounted) { setLoading(false); setLoadingSimilar(false); }
+      }
+    };
+    fetchVehicleData();
+    return () => { mounted = false; controller.abort(); };
+  }, [id]);
+
+  const handleAdd = async () => {
+    if (!user) {
+      navigate('/login', { state: { from: location }, replace: true });
+      return;
+    }
+    if (!vehicle) return;
+
+    setAddingToCart(true);
+    setCartError('');
+    try {
+      await addToCart(vehicle.vehicle_id);
+      navigate('/cart');
+    } catch (err) {
+      const errorMessage = err.response?.data?.error || 'Ошибка при добавлении в корзину.';
+      if (err.response?.status === 409) {
+        setCartError('Этот автомобиль уже в вашей корзине.');
+      } else {
+        setCartError(errorMessage);
+      }
+      console.error("Error adding to cart:", err);
+    } finally {
+      setAddingToCart(false);
+    }
+  };
+
+  if (loading && !vehicle) { 
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 20, minHeight: 'calc(100vh - 200px)' }}>
+        <CircularProgress size={60} />
+      </Box>
+    );
+  }
+
+  if (error && !vehicle) { 
+    return (
+      <Container maxWidth="md" sx={{ py: 4 }}>
+        <Alert severity="error" sx={{ mt: 5, p: 2, textAlign: 'center' }}>
+          <Typography variant="h6">{error}</Typography>
+        </Alert>
+        <Box textAlign="center" mt={3}>
+          <Button component={RouterLink} to="/" variant="outlined" color="primary">
+            Вернуться в каталог
+          </Button>
+        </Box>
+      </Container>
+    );
+  }
+
+  if (!loading && !vehicle && !error) { 
+      return (
+        <Container maxWidth="md" sx={{ py: 4 }}>
+          <Alert severity="warning" sx={{ mt: 5, p: 2, textAlign: 'center' }}>
+             <Typography variant="h6">Информация об автомобиле не найдена.</Typography>
+          </Alert>
+           <Box textAlign="center" mt={3}>
+            <Button component={RouterLink} to="/" variant="outlined" color="primary">
+                Вернуться в каталог
+            </Button>
+        </Box>
+        </Container>
+      );
+  }
+
+  const placeholderImage = '/placeholder-car.png';
+  let imageUrlToDisplay = placeholderImage;
+
+  if (vehicle) {
+      if (mainImageError && vehicle.image_url) {
+          imageUrlToDisplay = placeholderImage;
+      } else if (vehicle.image_url) {
+          imageUrlToDisplay = vehicle.image_url;
+      }
+  }
+
+  const priceRub = vehicle ? parseFloat(vehicle.price_per_day_usd) * USD_TO_RUB : 0;
+
+  const characteristics = vehicle ? [
+    { icon: <CategoryIcon fontSize="small" />, label: 'Тип кузова', value: vehicle.body_type },
+    { icon: <CalendarTodayIcon fontSize="small" />, label: 'Год', value: vehicle.year },
+    { icon: <SettingsIcon fontSize="small" />, label: 'Коробка', value: vehicle.gearbox },
+    { icon: <DriveEtaIcon fontSize="small" />, label: 'Привод', value: vehicle.drive },
+    { icon: <SpeedIcon fontSize="small" />, label: 'Мощность', value: `${vehicle.power_hp} л.с.` },
+    { icon: <EventSeatIcon fontSize="small" />, label: 'Мест', value: vehicle.seats },
+  ] : [];
+
+  const handleMainImageError = () => {
+    if (vehicle && vehicle.image_url && imageUrlToDisplay !== placeholderImage) {
+        console.error(`[VehicleDetail] Failed to load main image: ${vehicle.image_url}`);
+        setMainImageError(true);
+    } else if (imageUrlToDisplay === placeholderImage) {
+    }
+  };
+
+  if (!vehicle) {
+      return (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 10 }}>
+             <Typography>Загрузка данных об автомобиле...</Typography>
+          </Box>
+      );
+  }
+
+  return (
+    <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 } }}>
+      {/* Оставляем vehicle ? (...) для рендера, т.к. vehicle может быть null на первом рендере,
+          но предыдущие return обработают случаи лоадинга и ошибок, когда vehicle еще не загружен */}
+      {vehicle ? (
+        <>
+          <Grid container spacing={{ xs: 2, sm: 3, md: 4 }}>
+            <Grid item xs={12} md={7}> {/* Добавил item для Grid */}
+              <Paper
+                elevation={3}
+                sx={{
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                    p: 0.5,
+                    bgcolor: theme.palette.background.paper,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: { xs: 250, sm: 350, md: 400 }
+                }}
+              >
+                { mainImageError && imageUrlToDisplay === placeholderImage ? (
+                    <BrokenImageIcon sx={{ fontSize: 70, color: theme.palette.action.disabled }} />
+                ) : (
+                    <Box
+                        component="img"
+                        src={imageUrlToDisplay}
+                        alt={`${vehicle.brand} ${vehicle.model || ''}`}
+                        onError={handleMainImageError}
+                        sx={{
+                            width: '100%',
+                            height: 'auto',
+                            maxHeight: { xs: 350, sm: 400, md: 450 },
+                            objectFit: 'contain',
+                            display: 'block',
+                            borderRadius: 1.5,
+                        }}
+                    />
+                )}
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12} md={5}> {/* Добавил item для Grid */}
+              <Paper elevation={3} sx={{ p: { xs: 2, sm: 3 }, borderRadius: 2, height: '100%', display: 'flex', flexDirection: 'column', bgcolor: theme.palette.background.paper }}>
+                <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold', lineHeight: 1.25, color: theme.palette.text.primary }}>
+                  {vehicle.brand} {vehicle.model || ''}
+                </Typography>
+
+                {vehicle.review_count != null && vehicle.review_count > 0 && vehicle.avg_rating != null ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    {/* ИСПРАВЛЕНО: Убрано деление на 2 */}
+                    <Rating value={parseFloat(vehicle.avg_rating)} precision={0.5} readOnly />
+                    <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                      ({vehicle.review_count} {vehicle.review_count === 1 ? 'отзыв' : (vehicle.review_count > 1 && vehicle.review_count < 5) ? 'отзыва' : 'отзывов'})
+                    </Typography>
+                  </Box>
+                ) : (
+                    <Typography variant="body2" color="text.disabled" sx={{ mb: 2, fontStyle: 'italic' }}>
+                        Пока нет отзывов
+                    </Typography>
+                )}
+
+                <Typography variant="h5" color="primary.main" sx={{ fontWeight: 'bold', mb: 2 }}>
+                  {new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(priceRub)}
+                  <Typography component="span" variant="body1" color="text.secondary" sx={{ml: 0.5}}>/ день</Typography>
+                </Typography>
+
+                <Divider sx={{ my: 2 }} />
+
+                <Typography variant="h6" gutterBottom sx={{ mb: 1.5, color: theme.palette.text.primary }}>
+                  Характеристики:
+                </Typography>
+                <List dense sx={{ mb: 2, flexGrow: 1 }}>
+                  {characteristics.map((char) => (
+                    <ListItem key={char.label} disablePadding sx={{ mb: 0.8 }}>
+                      <ListItemIcon sx={{ minWidth: 36, color: theme.palette.text.secondary }}>{React.cloneElement(char.icon, { sx: { color: theme.palette.action.active }})}</ListItemIcon>
+                      <ListItemText
+                        primaryTypographyProps={{ variant: 'body1', component: 'span', sx: { fontWeight: 'medium', color: theme.palette.text.secondary, mr: 0.5 } }}
+                        secondaryTypographyProps={{ variant: 'body1', component: 'span', color: 'text.primary', fontWeight: 500 }}
+                        primary={`${char.label}:`}
+                        secondary={char.value}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+
+                {cartError && (
+                  <Alert severity={cartError.includes("уже в вашей корзине") ? "info" : "warning"} sx={{ my: 2 }}>
+                    {cartError}
+                    {cartError.includes("уже в вашей корзине") && (
+                      <Button component={RouterLink} to="/cart" size="small" sx={{ ml:1 }} color="primary" variant="text">В корзину</Button>
+                    )}
+                  </Alert>
+                )}
+
+                <Box sx={{ mt: 'auto', pt: 2 }}>
+                  <Button
+                    variant="contained" size="large" color="primary" fullWidth
+                    onClick={handleAdd}
+                    disabled={addingToCart || (!!cartError && cartError.includes("уже в вашей корзине"))}
+                    startIcon={addingToCart ? <CircularProgress size={20} color="inherit" /> : <ShoppingCartIcon />}
+                    sx={{ py: 1.5, fontWeight: 'bold', fontSize: '1rem' }}
+                  >
+                    {addingToCart ? 'Добавление...' : ((!!cartError && cartError.includes("уже в вашей корзине")) ? "Уже в корзине" : (user ? 'Добавить в корзину' : 'Войдите, чтобы арендовать'))}
+                  </Button>
+                </Box>
+              </Paper>
+            </Grid>
+          </Grid>
+
+          <Box sx={{ mt: { xs: 4, md: 6 } }}>
+            <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, borderRadius: 2, bgcolor: theme.palette.background.paper }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <RateReviewOutlinedIcon color="action" sx={{ mr: 1.5, fontSize: '1.8rem' }} />
+                <Typography variant="h5" component="h2" sx={{color: theme.palette.text.primary, fontWeight: 'medium'}}>
+                  Отзывы об автомобиле ({reviews.length})
+                </Typography>
+              </Box>
+              <Divider sx={{ mb: reviews.length > 0 ? 2 : 0 }} />
+              {reviews.length > 0 ? (
+                <List sx={{ p: 0 }}>
+                  {reviews.map((review, index) => (
+                    <React.Fragment key={review.id}>
+                      <ListItem alignItems="flex-start" sx={{ px: 0, py: 2 }}>
+                        <ListItemIcon sx={{ minWidth: 48, mt: 0.5, mr: 1.5 }}>
+                          <Avatar sx={{ bgcolor: theme.palette.secondary.light, color: theme.palette.secondary.contrastText }}>
+                            <AccountCircleIcon />
+                          </Avatar>
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                              <Typography variant="subtitle1" sx={{ fontWeight: 'medium', color: theme.palette.text.primary }}>
+                                Пользователь #{review.user_id} {/* Можно будет заменить на username, если API будет его возвращать */}
+                              </Typography>
+                              {/* ИСПРАВЛЕНО: Убрано деление на 2 для рейтинга отдельного отзыва */}
+                              <Rating name={`rating-view-${review.id}`} value={parseFloat(review.rating)} precision={0.5} readOnly size="small" />
+                            </Box>
+                          }
+                          secondary={
+                            <>
+                              <Typography component="span" variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                                {new Date(review.created_at).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </Typography>
+                              <Typography component="p" variant="body2" sx={{ whiteSpace: 'pre-line', color: theme.palette.text.secondary, lineHeight: 1.6 }}>
+                                {review.comment || <em style={{ color: theme.palette.text.disabled }}>Нет комментария</em>}
+                              </Typography>
+                            </>
+                          }
+                        />
+                      </ListItem>
+                      {index < reviews.length - 1 && <Divider component="li" variant="inset" sx={{ ml: '64px' }} />}
+                    </React.Fragment>
+                  ))}
+                </List>
+              ) : (
+                <Typography color="text.secondary" sx={{ textAlign: 'center', py: 3, fontStyle: 'italic' }}>
+                  Для этого автомобиля пока нет отзывов. Будьте первым!
+                </Typography>
+              )}
+            </Paper>
+          </Box>
+
+          {(!loading || vehicle) && !loadingSimilar && similarVehicles.length > 0 && (
+            <Box component="section" sx={{ mt: { xs: 5, md: 7 }, pt: {xs: 3, md: 4}, borderTop: `1px solid ${theme.palette.divider}` }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: { xs: 3, md: 4 } }}>
+                <AutoAwesomeIcon sx={{ color: theme.palette.primary.main, fontSize: {xs: '1.8rem', md: '2rem'}, mr: 1 }} />
+                <Typography variant="h4" component="h2" align="center" sx={{ fontWeight: 'bold', color: theme.palette.text.primary }}>
+                  Похожие автомобили
+                </Typography>
+              </Box>
+              <Grid container spacing={{ xs: 2, sm: 3 }}>
+                {similarVehicles.map(simVehicle => (
+                  <Grid item key={simVehicle.vehicle_id} xs={12} sm={6} md={4} lg={3}> {/* Добавил item для Grid */}
+                    <VehicleCard vehicle={simVehicle} />
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          )}
+          {(!loading || vehicle) && loadingSimilar && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4, mt: 4, flexDirection: 'column' }}>
+                <CircularProgress />
+                <Typography sx={{ml: 2, mt:1, color: 'text.secondary'}}>Загрузка похожих автомобилей...</Typography>
+            </Box>
+          )}
+        </>
+      ) : null }
+    </Container>
+  );
+}
+```
+
+### `frontend\src\api.js`
+
+```javascript
+import axios from 'axios';
+
+const API = axios.create({
+  baseURL: 'http://localhost:5000/api',
+});
+
+// —————————————————————————————
+// Auth (JWT)
+// —————————————————————————————
+export const setAuthToken = token => {
+  if (token) {
+    localStorage.setItem('token', token);
+    API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    console.log("API: Auth token set.");
+  } else {
+    localStorage.removeItem('token');
+    delete API.defaults.headers.common['Authorization'];
+    console.log("API: Auth token removed.");
+  }
+};
+
+// при старте подхватываем, если был в localStorage
+const storedToken = localStorage.getItem('token');
+if (storedToken) {
+  API.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+  console.log("API: Initial auth token applied from localStorage.");
+}
+
+export const register = creds => API.post('/auth/register', creds).then(r => r.data);
+export const login    = creds => API.post('/auth/login', creds).then(r => r.data);
+
+// —————————————————————————————
+// Vehicles (публичные)
+// —————————————————————————————
+export const getVehicles        = (filters = {}) =>
+  API.get('/vehicles', { params: filters }).then(r => r.data);
+
+export const getVehicle         = (id, config = {}) => {
+  // теперь любая непустая строка или число
+  if (id == null || id === '') {
+    return Promise.reject(new Error("Invalid vehicle ID provided to getVehicle."));
+  }
+  return API.get(`/vehicles/${id}`, config).then(r => r.data);
+};
+
+export const getVehicleReviews  = (vehicleId, config = {}) => {
+  if (vehicleId == null || vehicleId === '') {
+    return Promise.reject(new Error("Invalid vehicle ID provided for getVehicleReviews."));
+  }
+  return API.get(`/vehicles/${vehicleId}/reviews`, config).then(r => r.data);
+};
+
+// —————————————————————————————
+// Cart (защищённые)
+// —————————————————————————————
+export const getCart         = () => API.get('/cart').then(r => r.data);
+export const addToCart       = id => API.post('/cart', { vehicleId: id }).then(r => r.data);
+export const removeFromCart  = id => API.delete(`/cart/${id}`).then(r => r.data);
+
+// —————————————————————————————
+// Order & History (защищённые)
+// —————————————————————————————
+export const checkout  = () => API.post('/checkout').then(r => r.data);
+export const getHistory = () => API.get('/history').then(r => r.data);
+
+// —————————————————————————————
+// Reviews (защищённые)
+// —————————————————————————————
+export const getReviews   = () => API.get('/reviews').then(r => r.data);
+export const postReview   = data => API.post('/reviews', data).then(r => r.data);
+export const updateReview = (id, data) => API.put(`/reviews/${id}`, data).then(r => r.data);
+export const deleteReview = id => API.delete(`/reviews/${id}`).then(() => {});
+
+// —————————————————————————————
+// Recommendations
+// —————————————————————————————
+export const getGeneralRecommendations        = () => API.get('/recommendations').then(r => r.data);
+export const getPersonalRecommendations       = () => API.get('/recommendations/personal').then(r => r.data);
+
+export const getSimilarVehicleRecommendations = (vehicleId, config = {}) => {
+  if (vehicleId == null || vehicleId === '') {
+    return Promise.reject(new Error("Invalid vehicle ID provided to getSimilarVehicleRecommendations."));
+  }
+  return API.get(`/vehicles/${vehicleId}/recommendations`, config).then(r => r.data);
+};
+
+// —————————————————————————————
+// Admin: Users
+// —————————————————————————————
+export const adminGetUsers    = () => API.get('/admin/users').then(r => r.data);
+export const adminUpdateUser  = (id, data) => API.put(`/admin/users/${id}`, data).then(r => r.data);
+export const adminDeleteUser  = id => API.delete(`/admin/users/${id}`).then(r => r.data);
+
+// —————————————————————————————
+// Admin: Vehicles
+// —————————————————————————————
+export const adminGetVehicles   = () => API.get('/admin/vehicles').then(r => r.data);
+export const adminCreateVehicle = data => API.post('/admin/vehicles', data).then(r => r.data);
+export const adminUpdateVehicle = (id, data) => API.put(`/admin/vehicles/${id}`, data).then(r => r.data);
+export const adminDeleteVehicle = id => API.delete(`/admin/vehicles/${id}`).then(r => r.data);
+
+export default API;
+```
+
+### `frontend\src\App.jsx`
+
+```javascript
+import React from 'react';
+import { Routes, Route } from 'react-router-dom';
+import Navbar from './components/Navbar';
+import ProtectedRoute from './components/ProtectedRoute';
+import { Box, Container, Typography, Button } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
+
+// Страницы
+import Home                          from './pages/Home';
+import VehicleDetail                 from './pages/VehicleDetail';
+import Cart                          from './pages/Cart';
+import History                       from './pages/History';
+import Reviews                       from './pages/Reviews';
+import Login                         from './pages/Login';
+import Register                      from './pages/Register';
+import PersonalRecommendationsPage   from './pages/PersonalRecommendationsPage';
+import AdminPanel                    from './pages/AdminPanel';
+
+// 404
+const NotFoundPage = () => (
+  <Container maxWidth="sm" sx={{ textAlign: 'center', mt: 10, py: 5 }}>
+    <Typography
+      variant="h1"
+      component="div"
+      color="text.secondary"
+      sx={{ fontSize: '6rem', fontWeight: 'bold' }}
+    >
+      404
+    </Typography>
+    <Typography variant="h4" component="h2" gutterBottom>
+      Страница не найдена
+    </Typography>
+    <Typography color="text.secondary" sx={{ mb: 3 }}>
+      Извините, мы не смогли найти страницу, которую вы искали.
+    </Typography>
+    <Button component={RouterLink} to="/" variant="contained" color="primary">
+      Вернуться на главную
+    </Button>
+  </Container>
+);
+
+export default function App() {
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default' }}>
+      <Navbar />
+      <Box component="main" sx={{ flexGrow: 1, width: '100%' }}>
+        <Routes>
+          {/* публичные */}
+          <Route path="/" element={<Home />} />
+          <Route path="/vehicles/:id" element={<VehicleDetail />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+
+          {/* защищённые */}
+          <Route path="/cart" element={
+            <ProtectedRoute>
+              <Cart />
+            </ProtectedRoute>
+          } />
+          <Route path="/history" element={
+            <ProtectedRoute>
+              <History />
+            </ProtectedRoute>
+          } />
+          <Route path="/reviews" element={
+            <ProtectedRoute>
+              <Reviews />
+            </ProtectedRoute>
+          } />
+          <Route path="/recommendations/personal" element={
+            <ProtectedRoute>
+              <PersonalRecommendationsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin" element={
+            <ProtectedRoute> {/* ProtectedRoute проверяет, что user существует */}
+              <AdminPanel /> {/* Дополнительная проверка роли может быть внутри AdminPanel или на бэкенде */}
+            </ProtectedRoute>
+          } />
+
+          {/* 404 */}
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </Box>
+    </Box>
+  );
+}
+```
+
+### `frontend\src\main.jsx`
+
+```javascript
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import { ThemeProvider, CssBaseline } from '@mui/material';
+import App from './App';
+import './index.css';
+import theme from './theme';
+import { AuthProvider } from './contexts/AuthContext';
+
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <ThemeProvider theme={theme}>
+      <CssBaseline /> {/* Применяет базовые стили и фон из темы */}
+      <AuthProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </AuthProvider>
+    </ThemeProvider>
+  </React.StrictMode>
+);
+```
+
+### `frontend\src\theme.js`
+
+```javascript
+import { createTheme } from '@mui/material/styles';
+
+const theme = createTheme({
+  palette: {
+    mode: 'light',
+    primary: {
+      main: '#EF4444',
+      contrastText: '#ffffff',
+    },
+    secondary: {
+      main: '#1F2937',
+      contrastText: '#ffffff',
+    },
+    background: {
+      default: '#FFFFFF',
+      paper: '#F9FAFB', 
+    },
+    text: {
+      primary: '#111827', 
+      secondary: '#6B7281', 
+      disabled: '#9CA3AF',
+    },
+    customNavbar: {
+      background: '#111827', 
+      text: '#E5E7EB',      
+      hoverText: '#FFFFFF',   
+      activeText: '#EF4444', 
+    }
+  },
+  typography: {
+    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    h3: {
+      fontSize: '2.25rem', 
+      fontWeight: 700,
+      lineHeight: 1.2,
+    },
+    h4: {
+      fontSize: '1.875rem',
+      fontWeight: 600,
+      lineHeight: 1.25,
+    },
+    h5: {
+      fontSize: '1.5rem',
+      fontWeight: 600,
+      lineHeight: 1.3,
+    },
+    h6: {
+      fontSize: '1.25rem',
+      fontWeight: 600,
+      lineHeight: 1.3,
+    },
+    button: {
+      textTransform: 'none',
+      fontWeight: 600,
+    },
+  },
+  components: {
+    MuiAppBar: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          backgroundColor: theme.palette.customNavbar.background,
+          color: theme.palette.customNavbar.text,
+          boxShadow: '0 2px 4px -1px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.06)',
+        }),
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: '6px',
+        },
+        textInherit: ({ theme }) => ({ 
+            color: theme.palette.customNavbar.text,
+            '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                color: theme.palette.customNavbar.hoverText,
+            },
+        }),
+        outlinedError: ({ theme }) => ({
+            borderColor: theme.palette.customNavbar.text, 
+            color: theme.palette.customNavbar.text,
+            '&:hover': {
+                borderColor: theme.palette.error.main,
+                backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                color: theme.palette.error.main,
+            },
+        })
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          borderRadius: '8px',
+          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1)',
+        },
+      },
+    },
+    MuiPaper: {
+        styleOverrides: {
+            root: {
+                backgroundColor: '#FFFFFF',
+            }
+        }
+    }
+  },
+});
+
+export default theme;
+```
+
