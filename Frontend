@@ -3427,9 +3427,6 @@ const API = axios.create({
   baseURL: 'http://localhost:5000/api',
 });
 
-// —————————————————————————————
-// Auth (JWT)
-// —————————————————————————————
 export const setAuthToken = token => {
   if (token) {
     localStorage.setItem('token', token);
@@ -3442,7 +3439,6 @@ export const setAuthToken = token => {
   }
 };
 
-// при старте подхватываем, если был в localStorage
 const storedToken = localStorage.getItem('token');
 if (storedToken) {
   API.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
@@ -3452,14 +3448,10 @@ if (storedToken) {
 export const register = creds => API.post('/auth/register', creds).then(r => r.data);
 export const login    = creds => API.post('/auth/login', creds).then(r => r.data);
 
-// —————————————————————————————
-// Vehicles (публичные)
-// —————————————————————————————
 export const getVehicles        = (filters = {}) =>
   API.get('/vehicles', { params: filters }).then(r => r.data);
 
 export const getVehicle         = (id, config = {}) => {
-  // теперь любая непустая строка или число
   if (id == null || id === '') {
     return Promise.reject(new Error("Invalid vehicle ID provided to getVehicle."));
   }
@@ -3473,30 +3465,18 @@ export const getVehicleReviews  = (vehicleId, config = {}) => {
   return API.get(`/vehicles/${vehicleId}/reviews`, config).then(r => r.data);
 };
 
-// —————————————————————————————
-// Cart (защищённые)
-// —————————————————————————————
 export const getCart         = () => API.get('/cart').then(r => r.data);
 export const addToCart       = id => API.post('/cart', { vehicleId: id }).then(r => r.data);
 export const removeFromCart  = id => API.delete(`/cart/${id}`).then(r => r.data);
 
-// —————————————————————————————
-// Order & History (защищённые)
-// —————————————————————————————
 export const checkout  = () => API.post('/checkout').then(r => r.data);
 export const getHistory = () => API.get('/history').then(r => r.data);
 
-// —————————————————————————————
-// Reviews (защищённые)
-// —————————————————————————————
 export const getReviews   = () => API.get('/reviews').then(r => r.data);
 export const postReview   = data => API.post('/reviews', data).then(r => r.data);
 export const updateReview = (id, data) => API.put(`/reviews/${id}`, data).then(r => r.data);
 export const deleteReview = id => API.delete(`/reviews/${id}`).then(() => {});
 
-// —————————————————————————————
-// Recommendations
-// —————————————————————————————
 export const getGeneralRecommendations        = () => API.get('/recommendations').then(r => r.data);
 export const getPersonalRecommendations       = () => API.get('/recommendations/personal').then(r => r.data);
 
@@ -3507,16 +3487,10 @@ export const getSimilarVehicleRecommendations = (vehicleId, config = {}) => {
   return API.get(`/vehicles/${vehicleId}/recommendations`, config).then(r => r.data);
 };
 
-// —————————————————————————————
-// Admin: Users
-// —————————————————————————————
 export const adminGetUsers    = () => API.get('/admin/users').then(r => r.data);
 export const adminUpdateUser  = (id, data) => API.put(`/admin/users/${id}`, data).then(r => r.data);
 export const adminDeleteUser  = id => API.delete(`/admin/users/${id}`).then(r => r.data);
 
-// —————————————————————————————
-// Admin: Vehicles
-// —————————————————————————————
 export const adminGetVehicles   = () => API.get('/admin/vehicles').then(r => r.data);
 export const adminCreateVehicle = data => API.post('/admin/vehicles', data).then(r => r.data);
 export const adminUpdateVehicle = (id, data) => API.put(`/admin/vehicles/${id}`, data).then(r => r.data);
