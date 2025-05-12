@@ -1,0 +1,1664 @@
+### `backend\app.py`
+
+```python
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+from flask import jsonify
+from flask_cors import cross_origin
+from werkzeug.exceptions import HTTPException
+from flask_bcrypt import Bcrypt
+from flask_jwt_extended import (
+    JWTManager, create_access_token,
+    jwt_required, get_jwt_identity, get_jwt
+)
+from decimal import Decimal
+from models import User, Role, Review, Order, OrderItem
+from database import db
+from sqlalchemy import or_
+from sqlalchemy.sql import func
+import os
+import csv
+import logging
+import joblib
+import pandas as pd
+import numpy as np
+from functools import wraps
+from datetime import datetime
+
+ARTIFACTS_PATH = os.path.join(os.path.dirname(__file__), 'models', 'recommendation_artifacts_csv.joblib')
+if not os.path.exists(ARTIFACTS_PATH):
+    print(f"CRITICAL: Artifacts file not found at {ARTIFACTS_PATH}. Recommendation system will not work.")
+    art = {}
+else:
+    try:
+        art = joblib.load(ARTIFACTS_PATH)
+        print(f"Artifacts loaded successfully from {ARTIFACTS_PATH}")
+    except Exception as e:
+        print(f"CRITICAL: Failed to load artifacts from {ARTIFACTS_PATH}: {e}. Recommendation system will not work.")
+        art = {}
+
+user_knn = art.get('user_knn')
+item_knn = art.get('item_knn')
+item_pipeline = art.get('item_pipeline')
+train_centered_idx = art.get('train_centered_index')
+train_centered_cols = art.get('train_centered_columns')
+user_means = art.get('user_means')
+user_history = art.get('user_rated_history', {})
+X_items_index = art.get('X_items_df_index')
+X_items_used_cat_features = art.get('X_items_df_used_cat_features', [])
+X_items_used_num_features = art.get('X_items_df_used_num_features', [])
+X_ITEMS_PIPELINE_COLS = X_items_used_cat_features + X_items_used_num_features
+TOP_MODELS_FOR_GROUPING = art.get('top_models_for_grouping', [])
+global_mean = art.get('global_mean_rating', 3.0)
+MIN_RATING = art.get('MIN_RATING', 1.0)
+MAX_RATING = art.get('MAX_RATING', 5.0)
+best_alpha = art.get('best_alpha_hybrid', 0.5)
+
+from database import db
+from models import Role, User, Vehicle, CartItem, Order, OrderItem, Review
+
+app = Flask(__name__)
+
+
+CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}}, supports_credentials=True)
+
+app.logger.setLevel(logging.DEBUG)
+for handler in app.logger.handlers[:]:
+    app.logger.removeHandler(handler)
+log_handler = logging.StreamHandler()
+log_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - [APP] - %(message)s')
+log_handler.setFormatter(log_formatter)
+app.logger.addHandler(log_handler)
+app.logger.propagate = False
+app.logger.info("Flask application logger configured.")
+
+app_logger_for_artifacts = app.logger
+app_logger_for_artifacts.info(f"Type of user_knn: {type(user_knn)}")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'mysql+pymysql://root:PisyaMorja123@localhost/db_name')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'your-super-secret-fallback-key-for-admin-panel')
+
+db.init_app(app)
+bcrypt = Bcrypt(app)
+jwt = JWTManager(app)
+
+with app.app_context():
+    app.logger.info("Application context entered for DB setup.")
+    db.create_all()
+    app.logger.info("db.create_all() called (creates tables if they don't exist).")
+    if not Role.query.filter_by(name='user').first():
+        app.logger.info("Default 'user' role not found, creating it.")
+        db.session.add(Role(name='user'))
+    if not Role.query.filter_by(name='admin').first():
+        app.logger.info("Default 'admin' role not found, creating it.")
+        db.session.add(Role(name='admin'))
+    if db.session.new:
+        db.session.commit()
+        app.logger.info("Default roles committed if they were created.")
+    if not Vehicle.query.first():
+        app.logger.info("No vehicles found in DB, attempting to load from CSV.")
+        csv_path = os.path.join(os.path.dirname(__file__), 'data', 'project_vehicle_dataset.csv')
+        if os.path.exists(csv_path):
+            app.logger.info(f"Vehicles CSV file found at {csv_path}.")
+            try:
+                with open(csv_path, newline='', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    vehicles_to_add = []
+                    required_cols_for_value_check = ['vehicle_id', 'brand', 'body_type', 'year', 'gearbox', 'drive', 'power_hp', 'seats', 'price_per_day_usd']
+                    for row_num, row in enumerate(reader):
+                        try:
+                            if not all(col in row and str(row[col]).strip() for col in required_cols_for_value_check):
+                                app.logger.warning(f"App CSV Load: Missing required data in row {row_num+1}. Skipping. Row: {row}")
+                                continue
+                            vehicle_id_str = str(row['vehicle_id']).strip()
+                            image_url_val = str(row.get('image', '')).strip()
+                            if not image_url_val or image_url_val.lower() == 'n/a': image_url_val = None
+                            model_val = str(row.get('model', '')).strip()
+                            if not model_val: model_val = None
+                            v = Vehicle(
+                                vehicle_id=vehicle_id_str, brand=str(row['brand']).strip(), model=model_val,
+                                body_type=str(row['body_type']).strip(), year=int(row['year']),
+                                gearbox=str(row['gearbox']).strip(), drive=str(row['drive']).strip(),
+                                power_hp=int(row['power_hp']), seats=int(row['seats']),
+                                price_per_day_usd=Decimal(row['price_per_day_usd']), image_url=image_url_val
+                            )
+                            vehicles_to_add.append(v)
+                        except KeyError as ke: app.logger.error(f"App CSV Load Error: Missing key {ke} in row {row_num+1}: {row}")
+                        except ValueError as ve: app.logger.error(f"App CSV Load Error: Value error {ve} in row {row_num+1}: {row}")
+                        except Exception as e_inner: app.logger.error(f"App CSV Load: Generic error in row {row_num+1}: {e_inner}. Row: {row}", exc_info=True)
+                    if vehicles_to_add:
+                        db.session.bulk_save_objects(vehicles_to_add); db.session.commit()
+                        app.logger.info(f"{len(vehicles_to_add)} vehicles loaded from CSV into app DB and committed.")
+                    else: app.logger.info("No new vehicles to add from CSV (or all rows had errors) during app startup.")
+            except Exception as e:
+                app.logger.error(f"Error loading vehicles from CSV during app startup: {e}", exc_info=True)
+                db.session.rollback()
+        else: app.logger.warning(f"Vehicles CSV file not found at {csv_path} during app startup.")
+    else: app.logger.info("Vehicles already exist in the database, skipping CSV load during app startup.")
+
+
+def predict_user_cf_revised(user_id, vehicle_id_to_predict_str, current_user_actual_history=None):
+    user_specific_mean = user_means.get(user_id, global_mean) if user_means is not None else global_mean
+    if user_knn is None or train_centered_idx is None or user_id not in train_centered_idx or train_centered_cols is None:
+        return user_specific_mean
+    user_ratings_for_train_items = pd.Series(0.0, index=train_centered_cols)
+    hist_to_use = current_user_actual_history if current_user_actual_history is not None else user_history.get(user_id, {})
+    for item_id_hist_str, rating_hist in hist_to_use.items():
+        if item_id_hist_str in train_centered_cols:
+            try: user_ratings_for_train_items[item_id_hist_str] = float(rating_hist) - user_specific_mean
+            except (ValueError, TypeError): pass
+    centered_user_vector_values = user_ratings_for_train_items.values
+    if not np.any(centered_user_vector_values): return user_specific_mean
+    try:
+        num_samples_fit = user_knn.n_samples_fit_
+        k_neighbors = min(user_knn.n_neighbors, num_samples_fit -1 if num_samples_fit > 1 else 0)
+        if k_neighbors <= 0 : return user_specific_mean
+        distances, neighbor_indices_flat = user_knn.kneighbors(centered_user_vector_values.reshape(1, -1), n_neighbors=k_neighbors)
+        neighbor_indices_flat = neighbor_indices_flat.flatten()
+    except Exception as e:
+        app.logger.error(f"UCF: Error in kneighbors for user {user_id}, item '{vehicle_id_to_predict_str}': {e}", exc_info=True)
+        return user_specific_mean
+    similarities = 1.0 - distances.flatten()
+    valid_neighbor_indices = [idx for idx in neighbor_indices_flat if 0 <= idx < len(train_centered_idx)]
+    neighbor_user_ids_from_idx = [train_centered_idx[i] for i in valid_neighbor_indices]
+    similarities = np.array([sim for i, sim in enumerate(similarities) if neighbor_indices_flat[i] in valid_neighbor_indices])
+    numerator = 0.0
+    denominator = 0.0
+    for sim_score, neighbor_uid in zip(similarities, neighbor_user_ids_from_idx):
+        if sim_score <= 1e-6: continue
+        neighbor_hist_artifact = user_history.get(neighbor_uid, {})
+        neighbor_rating_for_item = neighbor_hist_artifact.get(vehicle_id_to_predict_str)
+        if neighbor_rating_for_item is not None:
+            try:
+                neighbor_rating_val = float(neighbor_rating_for_item)
+                neighbor_mean_rating = user_means.get(neighbor_uid, global_mean) if user_means is not None else global_mean
+                numerator += sim_score * (neighbor_rating_val - neighbor_mean_rating)
+                denominator += sim_score
+            except (ValueError, TypeError): pass
+    if denominator < 1e-6 : return user_specific_mean
+    predicted_rating = user_specific_mean + (numerator / denominator)
+    return np.clip(predicted_rating, MIN_RATING, MAX_RATING)
+
+def predict_content_cf_revised(user_id, vehicle_id_to_predict_str, current_user_actual_history=None):
+    user_specific_mean = user_means.get(user_id, global_mean) if user_means is not None else global_mean
+    if item_knn is None or item_pipeline is None or X_items_index is None or not X_ITEMS_PIPELINE_COLS:
+        return user_specific_mean
+    target_vehicle = db.session.get(Vehicle, vehicle_id_to_predict_str)
+    if not target_vehicle: return user_specific_mean
+    item_features_dict = {}
+    for feature_name in X_ITEMS_PIPELINE_COLS:
+        if feature_name == 'model_grouped':
+            raw_model_value = getattr(target_vehicle, 'model', None)
+            item_features_dict['model_grouped'] = raw_model_value if raw_model_value and raw_model_value in TOP_MODELS_FOR_GROUPING else 'Other_Model'
+        else: item_features_dict[feature_name] = getattr(target_vehicle, feature_name, None)
+    try:
+        item_features_df = pd.DataFrame([item_features_dict])[X_ITEMS_PIPELINE_COLS]
+        transformed_item_vector = item_pipeline.transform(item_features_df)
+    except Exception as e:
+        app.logger.error(f"CCF: Error in item_pipeline.transform for vehicle '{vehicle_id_to_predict_str}': {e}", exc_info=True)
+        app.logger.error(f"CCF: Features passed to pipeline: {item_features_dict}")
+        return user_specific_mean
+    num_items_for_knn = len(X_items_index) if X_items_index is not None else 0
+    desired_k_for_query = (item_knn.n_neighbors if hasattr(item_knn, 'n_neighbors') else 5) + 1
+    k_neighbors_param = min(desired_k_for_query, num_items_for_knn)
+    if k_neighbors_param <= 0: return user_specific_mean
+    try:
+        distances, neighbor_indices_flat = item_knn.kneighbors(transformed_item_vector, n_neighbors=k_neighbors_param)
+        neighbor_indices_flat = neighbor_indices_flat.flatten()
+    except Exception as e:
+        app.logger.error(f"CCF: Error in item_knn.kneighbors for vehicle '{vehicle_id_to_predict_str}': {e}", exc_info=True)
+        return user_specific_mean
+    similar_vehicle_ids_str = []
+    for idx in neighbor_indices_flat:
+        if 0 <= idx < num_items_for_knn:
+            vid_str = X_items_index[idx]
+            if vid_str != vehicle_id_to_predict_str: similar_vehicle_ids_str.append(vid_str)
+    if not similar_vehicle_ids_str: return user_specific_mean
+    user_ratings_for_similar_items = []
+    hist_to_use_for_ccf = current_user_actual_history if current_user_actual_history is not None else user_history.get(user_id, {})
+    for sim_vid_str in similar_vehicle_ids_str:
+        if sim_vid_str in hist_to_use_for_ccf:
+            try: user_ratings_for_similar_items.append(float(hist_to_use_for_ccf[sim_vid_str]))
+            except (ValueError, TypeError): pass
+    if not user_ratings_for_similar_items:
+        if hist_to_use_for_ccf:
+            try:
+                valid_ratings_in_hist = [float(r) for r in hist_to_use_for_ccf.values() if isinstance(r, (int, float, str)) and str(r).replace('.', '', 1).isdigit()]
+                if valid_ratings_in_hist: return np.clip(np.mean(valid_ratings_in_hist), MIN_RATING, MAX_RATING)
+            except Exception: pass
+        return user_specific_mean
+    predicted_rating = np.mean(user_ratings_for_similar_items)
+    return np.clip(predicted_rating, MIN_RATING, MAX_RATING)
+
+@jwt.expired_token_loader
+def expired_token_callback(jwt_header, jwt_payload): return jsonify(msg="Token has expired", error_code="TOKEN_EXPIRED"), 401
+@jwt.invalid_token_loader
+def invalid_token_callback(error_string): return jsonify(msg=f"Invalid Token: {error_string}", error_code="INVALID_TOKEN"), 422
+@jwt.unauthorized_loader
+def missing_token_callback(error_string): return jsonify(msg=f"Authorization Required: {error_string}", error_code="AUTHORIZATION_REQUIRED"), 401
+@jwt.needs_fresh_token_loader
+def token_not_fresh_callback(jwt_header, jwt_data): return jsonify(msg="Fresh token required", error_code="FRESH_TOKEN_REQUIRED"), 401
+
+def get_current_user_id_from_jwt():
+    jwt_user_id_str = get_jwt_identity()
+    try: return int(jwt_user_id_str)
+    except (ValueError, TypeError):
+        app.logger.error(f"Invalid JWT identity: '{jwt_user_id_str}'. Cannot convert to int.")
+        raise ValueError(f"Invalid user identity in token: {jwt_user_id_str}")
+
+def admin_required(fn):
+    @wraps(fn)
+    @jwt_required()
+    def wrapper(*args, **kwargs):
+        current_user_claims = get_jwt()
+        user_role = current_user_claims.get('role')
+        if user_role != 'admin':
+            user_id_for_log = get_jwt_identity()
+            app.logger.warning(f"Admin access denied for user ID: {user_id_for_log}. Role in token: '{user_role}'")
+            return jsonify(msg="Administration rights required."), 403
+        return fn(*args, **kwargs)
+    return wrapper
+
+@app.route('/api/auth/register', methods=['POST'])
+def register():
+    data = request.get_json(silent=True)
+    if not data: return jsonify({'error': 'Request body must be JSON and not empty'}), 400
+    username, password = data.get('username'), data.get('password')
+    if not username or not password: return jsonify({'error': 'Username and password required'}), 400
+    if User.query.filter_by(username=username).first(): return jsonify({'error': 'User already exists'}), 409
+    role = Role.query.filter_by(name='user').first()
+    if not role:
+        app.logger.error("CRITICAL: 'user' role not found during registration.")
+        return jsonify({'error': 'Server configuration error, please try again later.'}), 500
+    pw_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+    user = User(username=username, password_hash=pw_hash, role_id=role.id)
+    db.session.add(user); db.session.commit()
+    app.logger.info(f"User '{username}' registered with ID {user.id} and role '{role.name}'.")
+    return jsonify({'message': 'Registered successfully. Please login.'}), 201
+
+
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    data = request.get_json(silent=True)
+    if not data: return jsonify({'error': 'Request body must be JSON and not empty'}), 400
+    username, password = data.get('username'), data.get('password')
+    if not username or not password: return jsonify({'error': 'Username and password required'}), 400
+    user = User.query.filter_by(username=username).first()
+    if not user or not bcrypt.check_password_hash(user.password_hash, password):
+        app.logger.warning(f"Login attempt failed for username: {username}")
+        return jsonify({'error': 'Invalid username or password'}), 401
+    additional_claims = {"role": user.role.name if user.role else "user"}
+    if not user.role: app.logger.error(f"User {user.id} ('{user.username}') has no role assigned at login!")
+    token = create_access_token(identity=str(user.id), additional_claims=additional_claims)
+    app.logger.info(f"User '{username}' (ID: {user.id}, Role: {additional_claims.get('role')}) logged in.")
+    return jsonify({'token': token}), 200
+
+@app.route('/api/vehicles', methods=['GET'])
+def get_vehicles():
+    vehicles_query = db.session.query(
+        Vehicle,
+        func.avg(Review.rating).label('avg_rating'),
+        func.count(Review.id).label('review_count')
+    ).outerjoin(Review, Vehicle.vehicle_id == Review.vehicle_id) \
+     .group_by(Vehicle.vehicle_id).all()
+
+    result = [{
+        'vehicle_id': v.vehicle_id,
+        'brand': v.brand,
+        'model': v.model,
+        'body_type': v.body_type,
+        'year': v.year,
+        'gearbox': v.gearbox,
+        'drive': v.drive,
+        'power_hp': v.power_hp,
+        'seats': v.seats,
+        'price_per_day_usd': float(v.price_per_day_usd),
+        'image_url': v.image_url,
+        'avg_rating': float(avg_rating) if avg_rating is not None else None,
+        'review_count': review_count
+    } for v, avg_rating, review_count in vehicles_query]
+    return jsonify(result)
+
+@app.route('/api/vehicles/<string:vid>', methods=['GET'])
+def get_vehicle(vid):
+    vehicle_data = db.session.query(
+        Vehicle,
+        func.avg(Review.rating).label('avg_rating'),
+        func.count(Review.id).label('review_count')
+    ).outerjoin(Review, Vehicle.vehicle_id == Review.vehicle_id) \
+     .filter(Vehicle.vehicle_id == vid) \
+     .group_by(Vehicle.vehicle_id).first()
+
+    if not vehicle_data:
+        return jsonify({'error': 'Vehicle not found'}), 404
+
+    v, avg_rating, review_count = vehicle_data
+    return jsonify({
+        'vehicle_id': v.vehicle_id,
+        'brand': v.brand,
+        'model': v.model,
+        'body_type': v.body_type,
+        'year': v.year,
+        'gearbox': v.gearbox,
+        'drive': v.drive,
+        'power_hp': v.power_hp,
+        'seats': v.seats,
+        'price_per_day_usd': float(v.price_per_day_usd),
+        'image_url': v.image_url,
+        'avg_rating': float(avg_rating) if avg_rating is not None else None,
+        'review_count': review_count
+    })
+
+@app.route('/api/vehicles/<string:vid>/reviews', methods=['GET'])
+def get_vehicle_reviews(vid):
+    if not db.session.get(Vehicle, vid): return jsonify({'error': 'Vehicle not found'}), 404
+    reviews_q = Review.query.filter_by(vehicle_id=vid).order_by(Review.created_at.desc()).all()
+    return jsonify([{'id': r.id, 'user_id': r.user_id, 'vehicle_id': r.vehicle_id, 'order_id': r.order_id,
+                     'rating': r.rating, 'created_at': r.created_at.isoformat(), 'comment': r.comment
+                    } for r in reviews_q])
+
+@app.route('/api/cart', methods=['GET', 'POST'])
+@jwt_required()
+def manage_cart():
+    try: user_id = get_current_user_id_from_jwt()
+    except ValueError as e: return jsonify(msg=str(e), error_code="INVALID_USER_ID"), 400
+    if request.method == 'GET':
+        items = CartItem.query.filter_by(user_id=user_id).all()
+        return jsonify([{'vehicle_id': i.vehicle_id, 'brand': i.vehicle.brand, 'model': i.vehicle.model,
+                         'price_per_day_usd': float(i.vehicle.price_per_day_usd), 'image_url': i.vehicle.image_url
+                        } for i in items])
+    data = request.get_json(silent=True)
+    if not data: return jsonify({'error': 'Request body must be JSON'}), 400
+    vid_str = data.get('vehicleId')
+    if not isinstance(vid_str, str) or not vid_str.strip(): return jsonify({'error': 'Invalid vehicleId, must be a non-empty string'}), 400
+    if not db.session.get(Vehicle, vid_str): return jsonify({'error': f'Vehicle {vid_str} not found'}), 404
+    if CartItem.query.filter_by(user_id=user_id, vehicle_id=vid_str).first(): return jsonify({'error': 'Item already in cart'}), 409
+    db.session.add(CartItem(user_id=user_id, vehicle_id=vid_str)); db.session.commit()
+    items_after_add = CartItem.query.filter_by(user_id=user_id).all()
+    return jsonify([{'vehicle_id': i.vehicle_id, 'brand': i.vehicle.brand, 'model': i.vehicle.model,
+                     'price_per_day_usd': float(i.vehicle.price_per_day_usd), 'image_url': i.vehicle.image_url
+                    } for i in items_after_add]), 201
+
+@app.route('/api/cart/<string:vid>', methods=['DELETE'])
+@jwt_required()
+def remove_cart(vid):
+    try: user_id = get_current_user_id_from_jwt()
+    except ValueError as e: return jsonify(msg=str(e), error_code="INVALID_USER_ID"), 400
+    item = CartItem.query.filter_by(user_id=user_id, vehicle_id=vid).first()
+    if not item: return jsonify({'error': 'Item not in cart'}), 404
+    db.session.delete(item); db.session.commit()
+    items_after_delete = CartItem.query.filter_by(user_id=user_id).all()
+    return jsonify([{'vehicle_id': i.vehicle_id, 'brand': i.vehicle.brand, 'model': i.vehicle.model,
+                     'price_per_day_usd': float(i.vehicle.price_per_day_usd), 'image_url': i.vehicle.image_url
+                    } for i in items_after_delete]), 200
+
+@app.route('/api/checkout', methods=['POST'])
+@jwt_required()
+def checkout():
+    try: user_id = get_current_user_id_from_jwt()
+    except ValueError as e: return jsonify(msg=str(e), error_code="INVALID_USER_ID"), 400
+    items = CartItem.query.filter_by(user_id=user_id).all()
+    if not items: return jsonify({'error': 'Cart empty'}), 400
+    order = Order(user_id=user_id)
+    db.session.add(order); db.session.flush()
+    for ci in items:
+        db.session.add(OrderItem(order_id=order.id, vehicle_id=ci.vehicle_id, price=ci.vehicle.price_per_day_usd))
+        db.session.delete(ci)
+    db.session.commit()
+    app.logger.info(f"Checkout successful for user {user_id}, order {order.id}. Cart cleared.")
+    return get_history()
+
+@app.route('/api/history', methods=['GET'])
+@jwt_required()
+def get_history():
+    try: user_id = get_current_user_id_from_jwt()
+    except ValueError as e: return jsonify(msg=str(e), error_code="INVALID_USER_ID"), 400
+    orders_q = Order.query.filter_by(user_id=user_id).order_by(Order.created_at.desc()).all()
+    return jsonify([{'order_id': o.id, 'created_at': o.created_at.isoformat(),
+                     'items': [{'vehicle_id': it.vehicle_id, 'brand': it.vehicle.brand,
+                                'model': it.vehicle.model, 'price': float(it.price),
+                                'image_url': it.vehicle.image_url } for it in o.items]
+                    } for o in orders_q])
+
+@app.route('/api/reviews', methods=['GET'])
+@jwt_required()
+def list_my_reviews():
+    try: user_id = get_current_user_id_from_jwt()
+    except ValueError as e: return jsonify(msg=str(e), error_code="INVALID_USER_ID"), 400
+    revs_q = db.session.query(Review, Vehicle.brand, Vehicle.model, Vehicle.image_url)\
+        .join(Vehicle, Review.vehicle_id == Vehicle.vehicle_id)\
+        .filter(Review.user_id == user_id).order_by(Review.created_at.desc()).all()
+    return jsonify([{'id': r.id, 'vehicle_id': r.vehicle_id,
+                     'vehicle_brand': brand, 'vehicle_model': model, 'vehicle_image_url': image_url,
+                     'order_id': r.order_id, 'rating': r.rating, 'created_at': r.created_at.isoformat(),
+                     'comment': r.comment} for r, brand, model, image_url in revs_q])
+
+@app.route('/api/reviews', methods=['POST'])
+@jwt_required()
+def add_review():
+    try:
+        user_id = get_current_user_id_from_jwt()
+    except ValueError as e:
+        app.logger.error(f"AddReview: Invalid user ID in token: {e}")
+        return jsonify(msg=str(e), error_code="INVALID_USER_ID"), 400
+
+    data = request.get_json(silent=True)
+    app.logger.debug(f"AddReview: Received data for user {user_id}: {data}")
+
+    if not data:
+        app.logger.warning(f"AddReview: User {user_id} - Request body is not JSON or empty.")
+        return jsonify({'error': 'Request body must be JSON and not empty'}), 400
+
+    vid_str = data.get('vehicle_id')
+    oid = data.get('order_id')
+    rating_val = data.get('rating')
+    comment_text = data.get('comment')
+
+    if not isinstance(vid_str, str) or not vid_str.strip():
+        app.logger.warning(f"AddReview: User {user_id} - Missing or invalid vehicle_id: {vid_str}")
+        return jsonify({'error': 'Missing or invalid type for field: vehicle_id (must be string)'}), 400
+    if not isinstance(oid, int):
+        app.logger.warning(f"AddReview: User {user_id} - Missing or invalid order_id type: {oid} (type: {type(oid)})")
+        return jsonify({'error': 'Missing or invalid type for field: order_id (must be integer)'}), 400
+    if not isinstance(rating_val, (int, float)):
+        app.logger.warning(f"AddReview: User {user_id} - Missing or invalid rating type: {rating_val} (type: {type(rating_val)})")
+        return jsonify({'error': 'Missing or invalid type for field: rating (must be number)'}), 400
+    if not (MIN_RATING <= rating_val <= MAX_RATING):
+        app.logger.warning(f"AddReview: User {user_id} - Rating out of range: {rating_val}")
+        return jsonify({'error': f'Rating must be between {MIN_RATING} and {MAX_RATING}'}), 400
+
+    order = db.session.get(Order, oid)
+    if not order:
+        app.logger.warning(f"AddReview: User {user_id} - Order ID {oid} not found.")
+        return jsonify({'error': 'Order not found'}), 404
+    if order.user_id != user_id:
+        app.logger.warning(f"AddReview: User {user_id} - Order ID {oid} does not belong to this user (belongs to {order.user_id}).")
+        return jsonify({'error': 'Invalid order or not user order'}), 403 
+
+    if not any(it.vehicle_id == vid_str for it in order.items):
+        app.logger.warning(f"AddReview: User {user_id} - Vehicle ID {vid_str} not found in order ID {oid}.")
+        return jsonify({'error': 'Vehicle not in specified order'}), 400
+
+    if Review.query.filter_by(user_id=user_id, vehicle_id=vid_str, order_id=oid).first():
+        app.logger.warning(f"AddReview: User {user_id} - Review for vehicle ID {vid_str} in order ID {oid} already exists.")
+        return jsonify({'error': 'Review for this item in this order already exists'}), 409
+
+    r = Review(user_id=user_id, vehicle_id=vid_str, order_id=oid, rating=rating_val, comment=comment_text)
+    db.session.add(r)
+    db.session.commit()
+    app.logger.info(f"AddReview: User {user_id} - Review ID {r.id} created successfully for vehicle {vid_str}, order {oid}.")
+
+    v_info = db.session.get(Vehicle, vid_str)
+    return jsonify({
+        'id': r.id, 'vehicle_id': r.vehicle_id, 'order_id': r.order_id, 'rating': r.rating,
+        'created_at': r.created_at.isoformat(), 'comment': r.comment,
+        'vehicle_brand': v_info.brand if v_info else None,
+        'vehicle_model': v_info.model if v_info else None,
+        'vehicle_image_url': v_info.image_url if v_info else None
+    }), 201
+
+
+@app.route('/api/reviews/<int:rid>', methods=['PUT'])
+@jwt_required()
+def update_review(rid):
+    try:
+        user_id = get_current_user_id_from_jwt()
+    except ValueError as e:
+        app.logger.error(f"UpdateReview: Invalid user ID in token: {e}")
+        return jsonify(msg=str(e), error_code="INVALID_USER_ID"), 400
+
+    data = request.get_json(silent=True)
+    app.logger.debug(f"UpdateReview: Received data for review ID {rid}, user {user_id}: {data}")
+
+    if not data:
+        app.logger.warning(f"UpdateReview: User {user_id}, Review ID {rid} - Request body is not JSON or empty.")
+        return jsonify({'error': 'Request body must be JSON and not empty'}), 400
+
+    rev = db.session.get(Review, rid)
+    if not rev:
+        app.logger.warning(f"UpdateReview: User {user_id} - Review ID {rid} not found.")
+        return jsonify({'error': 'Review not found'}), 404
+    if rev.user_id != user_id:
+        app.logger.warning(f"UpdateReview: User {user_id} - Review ID {rid} does not belong to this user (belongs to {rev.user_id}).")
+        return jsonify({'error': 'Review not found or not owned by user'}), 403
+
+    if 'rating' not in data:
+        app.logger.warning(f"UpdateReview: User {user_id}, Review ID {rid} - Missing 'rating' field in request.")
+        return jsonify({'error': 'Missing rating field for update'}), 400
+
+    try:
+        rating_val = data['rating']
+        if not isinstance(rating_val, (int, float)):
+            app.logger.warning(f"UpdateReview: User {user_id}, Review ID {rid} - Invalid rating type: {rating_val}")
+            raise ValueError("Rating must be a number.")
+        if not (MIN_RATING <= rating_val <= MAX_RATING):
+            app.logger.warning(f"UpdateReview: User {user_id}, Review ID {rid} - Rating out of range: {rating_val}")
+            raise ValueError(f"Rating must be between {MIN_RATING} and {MAX_RATING}.")
+    except (ValueError, TypeError) as e:
+        return jsonify({'error': f'Invalid rating: {e}'}), 400
+
+    rev.rating = rating_val
+    if 'comment' in data:
+        rev.comment = data.get('comment', rev.comment)
+
+    db.session.commit()
+    app.logger.info(f"UpdateReview: User {user_id} - Review ID {rid} updated successfully.")
+
+    v_info = db.session.get(Vehicle, rev.vehicle_id)
+    return jsonify({
+        'id': rev.id, 'vehicle_id': rev.vehicle_id, 'order_id': rev.order_id, 'rating': rev.rating,
+        'created_at': rev.created_at.isoformat(), 'comment': rev.comment,
+        'vehicle_brand': v_info.brand if v_info else None,
+        'vehicle_model': v_info.model if v_info else None,
+        'vehicle_image_url': v_info.image_url if v_info else None
+    }), 200
+
+@app.route('/api/reviews/<int:rid>', methods=['DELETE'])
+@jwt_required()
+def delete_review(rid):
+    try: user_id = get_current_user_id_from_jwt()
+    except ValueError as e: return jsonify(msg=str(e), error_code="INVALID_USER_ID"), 400
+    r = db.session.get(Review, rid)
+    if not r or r.user_id != user_id: return jsonify({'error': 'Review not found or not owned'}), 404
+    db.session.delete(r); db.session.commit()
+    app.logger.info(f"DeleteReview: User {user_id} - Review ID {rid} deleted.")
+    return '', 204
+
+
+@app.route('/api/recommendations', methods=['GET']) 
+@jwt_required(optional=True) 
+def get_general_recommendations():
+    user_id = None
+    try:
+        if get_jwt_identity(): user_id = get_current_user_id_from_jwt()
+    except Exception: user_id = None
+    recent_vids_str = set()
+    MIN_ITEMS_FOR_SIMILARITY = 1 
+    MAX_SOURCE_ITEMS = 3 
+    if user_id:
+        orders = Order.query.filter_by(user_id=user_id).order_by(Order.created_at.desc()).limit(MAX_SOURCE_ITEMS).all()
+        for o in orders:
+            for item in o.items: recent_vids_str.add(str(item.vehicle_id))
+            if len(recent_vids_str) >= MAX_SOURCE_ITEMS: break
+        if len(recent_vids_str) < MIN_ITEMS_FOR_SIMILARITY:
+            cart_items = CartItem.query.filter_by(user_id=user_id).limit(MAX_SOURCE_ITEMS - len(recent_vids_str)).all()
+            for item in cart_items: recent_vids_str.add(str(item.vehicle_id))
+    if not recent_vids_str or len(recent_vids_str) < MIN_ITEMS_FOR_SIMILARITY :
+        app.logger.info(f"GeneralRecommendations: User {user_id if user_id else 'Guest'} has insufficient history. Serving popular items.")
+        pop_recs_q = db.session.query(Vehicle, func.avg(Review.rating).label('avg_r'), func.count(Review.id).label('rev_c'))\
+            .outerjoin(Review).group_by(Vehicle.vehicle_id)\
+            .order_by(func.count(Review.id).desc(), func.avg(Review.rating).desc().nullslast()).limit(8).all()
+        return jsonify([{'vehicle_id': v.vehicle_id, 'brand': v.brand, 'model': v.model, 'body_type': v.body_type,
+                         'year': v.year, 'gearbox': v.gearbox, 'drive': v.drive, 'power_hp': v.power_hp, 'seats': v.seats,
+                         'price_per_day_usd': float(v.price_per_day_usd), 'image_url': v.image_url,
+                         'avg_rating': float(avg_r) if avg_r else None, 'review_count': rev_c} for v, avg_r, rev_c in pop_recs_q])
+    recent_vehicles_objs = Vehicle.query.filter(Vehicle.vehicle_id.in_(list(recent_vids_str))).all()
+    body_types = list(set(v.body_type for v in recent_vehicles_objs if v.body_type))
+    brands = list(set(v.brand for v in recent_vehicles_objs if v.brand))
+    seen_vids_for_this_user_query_str = recent_vids_str.copy()
+    if user_id:
+        seen_vids_for_this_user_query_str.update(item.vehicle_id for item in CartItem.query.filter_by(user_id=user_id).all())
+        all_ordered_items = OrderItem.query.join(Order).filter(Order.user_id == user_id).all()
+        seen_vids_for_this_user_query_str.update(str(item.vehicle_id) for item in all_ordered_items)
+    q_filters = []
+    if body_types: q_filters.append(Vehicle.body_type.in_(body_types))
+    if brands: q_filters.append(Vehicle.brand.in_(brands))
+    if not q_filters:
+        app.logger.warning(f"GeneralRecommendations: User {user_id} - no criteria from history. Falling back to popular.")
+        pop_recs_q = db.session.query(Vehicle, func.avg(Review.rating).label('avg_r'), func.count(Review.id).label('rev_c'))\
+            .outerjoin(Review).group_by(Vehicle.vehicle_id)\
+            .order_by(func.count(Review.id).desc(), func.avg(Review.rating).desc().nullslast()).limit(8).all()
+        return jsonify([{'vehicle_id': v.vehicle_id, 'brand': v.brand, 'model': v.model, 'body_type': v.body_type,
+                         'year': v.year, 'gearbox': v.gearbox, 'drive': v.drive, 'power_hp': v.power_hp, 'seats': v.seats,
+                         'price_per_day_usd': float(v.price_per_day_usd), 'image_url': v.image_url,
+                         'avg_rating': float(avg_r) if avg_r else None, 'review_count': rev_c} for v, avg_r, rev_c in pop_recs_q])
+    recs_q_builder = db.session.query(Vehicle, func.avg(Review.rating).label('avg_r'), func.count(Review.id).label('rev_c'))\
+        .outerjoin(Review).filter(or_(*q_filters))
+    if seen_vids_for_this_user_query_str:
+        recs_q_builder = recs_q_builder.filter(~Vehicle.vehicle_id.in_(list(seen_vids_for_this_user_query_str)))
+    final_recs_q = recs_q_builder.group_by(Vehicle.vehicle_id)\
+        .order_by(func.count(Review.id).desc(), func.avg(Review.rating).desc().nullslast(), func.random()).limit(4).all()
+    if not final_recs_q:
+        app.logger.info(f"GeneralRecommendations: User {user_id} - no recommendations from history similarity. Falling back to popular.")
+        pop_recs_q = db.session.query(Vehicle, func.avg(Review.rating).label('avg_r'), func.count(Review.id).label('rev_c'))\
+            .outerjoin(Review).group_by(Vehicle.vehicle_id)\
+            .order_by(func.count(Review.id).desc(), func.avg(Review.rating).desc().nullslast()).limit(4).all()
+        final_recs_q = pop_recs_q
+    return jsonify([{'vehicle_id': v.vehicle_id, 'brand': v.brand, 'model': v.model, 'body_type': v.body_type,
+                     'year': v.year, 'gearbox': v.gearbox, 'drive': v.drive, 'power_hp': v.power_hp, 'seats': v.seats,
+                     'price_per_day_usd': float(v.price_per_day_usd), 'image_url': v.image_url,
+                     'avg_rating': float(avg_r) if avg_r else None, 'review_count': rev_c} for v, avg_r, rev_c in final_recs_q])
+
+@app.route('/api/recommendations/personal', methods=['GET'])
+@jwt_required()
+def recommendations_personal_revised():
+    try: user_id = get_current_user_id_from_jwt()
+    except ValueError as e: return jsonify(msg=str(e), error_code="INVALID_USER_ID"), 400
+    app.logger.debug(f"PersonalRecommendations: Request for user_id: {user_id}")
+    user_actual_reviews_db = Review.query.filter_by(user_id=user_id).all()
+    current_user_actual_history_for_prediction = {str(r.vehicle_id): float(r.rating) for r in user_actual_reviews_db}
+    MIN_REVIEWS_FOR_PERSONAL = 1
+    if not current_user_actual_history_for_prediction or len(current_user_actual_history_for_prediction) < MIN_REVIEWS_FOR_PERSONAL:
+        app.logger.info(f"PersonalRecommendations: User {user_id} has {len(current_user_actual_history_for_prediction)} actual reviews. Returning empty list.")
+        return jsonify([])
+    app.logger.debug(f"PersonalRecommendations: User {user_id} has {len(current_user_actual_history_for_prediction)} items in actual history.")
+    all_db_vids_str = [str(v.vehicle_id) for v in db.session.query(Vehicle.vehicle_id).all()]
+    seen_vids_user_str = set(current_user_actual_history_for_prediction.keys())
+
+    hist_vids = list(current_user_actual_history_for_prediction.keys())
+    hist_vehicles = db.session.query(Vehicle).filter(Vehicle.vehicle_id.in_(hist_vids)).all()
+    brands = {v.brand for v in hist_vehicles if v.brand}
+    body_types = {v.body_type for v in hist_vehicles if v.body_type}
+    avg_year = sum(v.year for v in hist_vehicles) / len(hist_vehicles)
+    avg_power = sum(v.power_hp for v in hist_vehicles) / len(hist_vehicles)
+    year_min = int(avg_year) - 6
+    year_max = int(avg_year) + 6
+    power_min = int(avg_power) - 80
+    power_max = int(avg_power) + 80
+    all_db_vids_str    = [str(v.vehicle_id) for v in db.session.query(Vehicle.vehicle_id).all()]
+    seen_vids_user_str = set(hist_vids)
+    for order in Order.query.filter_by(user_id=user_id).all():
+        for item in order.items: seen_vids_user_str.add(str(item.vehicle_id))
+    for item in CartItem.query.filter_by(user_id=user_id).all(): seen_vids_user_str.add(str(item.vehicle_id))
+    candidate_vids_str = [vid_str for vid_str in all_db_vids_str if vid_str not in seen_vids_user_str]
+
+    valid_vids = {
+        vid for (vid,) in db.session.query(Vehicle.vehicle_id)
+            .filter(
+                Vehicle.vehicle_id.in_(candidate_vids_str),
+                Vehicle.brand.in_(brands),
+                Vehicle.body_type.in_(body_types),
+                Vehicle.year.between(year_min, year_max),
+                Vehicle.power_hp.between(power_min, power_max)
+            )
+            .all()
+    }
+    if valid_vids:
+        candidate_vids_str = list(valid_vids)
+    app.logger.debug(f"PersonalRecommendations: User {user_id} - candidates after attribute filter: {len(candidate_vids_str)}")
+    
+    if not candidate_vids_str:
+        app.logger.info(f"PersonalRecommendations: User {user_id} - no candidate vehicles left.")
+        return jsonify([])
+    app.logger.debug(f"PersonalRecommendations: User {user_id} - candidate vehicles count: {len(candidate_vids_str)}")
+    preds = []
+    for vid_str in candidate_vids_str:
+        ucf_p = predict_user_cf_revised(user_id, vid_str, current_user_actual_history_for_prediction)
+        ccf_p = predict_content_cf_revised(user_id, vid_str, current_user_actual_history_for_prediction)
+        ucf_p = global_mean if pd.isna(ucf_p) else ucf_p
+        ccf_p = global_mean if pd.isna(ccf_p) else ccf_p
+        hybrid_p = best_alpha * ucf_p + (1.0 - best_alpha) * ccf_p
+        preds.append({'vehicle_id': vid_str, 'score': hybrid_p})
+    FINAL_N_RECS = 10
+    sorted_preds_by_score = sorted(preds, key=lambda x: x['score'], reverse=True)
+    top_cand_ids_str = [p['vehicle_id'] for p in sorted_preds_by_score[:FINAL_N_RECS*2]]
+    if not top_cand_ids_str:
+        app.logger.info(f"PersonalRecommendations: User {user_id} - no candidates after prediction.")
+        return jsonify([])
+    recs_q = db.session.query(Vehicle, func.avg(Review.rating).label('avg_r'), func.count(Review.id).label('rev_c'))\
+        .outerjoin(Review).filter(Vehicle.vehicle_id.in_(top_cand_ids_str)).group_by(Vehicle.vehicle_id).all()
+    recs_map = {str(v.vehicle_id): {
+        'data': v, 'avg_r': float(avg_r) if avg_r else None, 'rev_c': rev_c,
+        'pred_score': next((p['score'] for p in sorted_preds_by_score if p['vehicle_id'] == str(v.vehicle_id)), global_mean)
+        } for v, avg_r, rev_c in recs_q}
+    enriched_recs_list = []
+    for p_item_id_str in top_cand_ids_str:
+        if p_item_id_str in recs_map:
+            entry = recs_map[p_item_id_str]
+            v_obj, avg_r_val, rev_c_val, pred_score_val = entry['data'], entry['avg_r'], entry['rev_c'], entry['pred_score']
+            enriched_recs_list.append({
+                'vehicle_id': v_obj.vehicle_id, 'brand': v_obj.brand, 'model': v_obj.model,
+                'body_type': v_obj.body_type, 'year': v_obj.year, 'gearbox': v_obj.gearbox,
+                'drive': v_obj.drive, 'power_hp': v_obj.power_hp, 'seats': v_obj.seats,
+                'price_per_day_usd': float(v_obj.price_per_day_usd), 'image_url': v_obj.image_url,
+                'predicted_score_for_user': round(pred_score_val, 2),
+                'avg_rating': avg_r_val, 'review_count': rev_c_val })
+    final_recs_list = enriched_recs_list[:FINAL_N_RECS]
+    app.logger.debug(f"PersonalRecommendations: User {user_id} - final recs count: {len(final_recs_list)}")
+    return jsonify(final_recs_list)
+
+@app.route('/api/vehicles/<string:vehicle_id_target>/recommendations', methods=['GET'])
+def recommendations_by_vehicle_revised(vehicle_id_target):
+    app.logger.debug(f"SimilarVehicles: Request for target_id: {vehicle_id_target}")
+    if item_knn is None or item_pipeline is None or X_items_index is None or not X_ITEMS_PIPELINE_COLS:
+        app.logger.warning("SimilarVehicles: Core artifacts missing. Returning [].")
+        return jsonify([])
+    target_v_db = db.session.get(Vehicle, vehicle_id_target)
+    if not target_v_db:
+        app.logger.warning(f"SimilarVehicles: Target vehicle ID {vehicle_id_target} not in DB. Returning [].")
+        return jsonify([])
+    app.logger.debug(f"SimilarVehicles: Target vehicle: {target_v_db.brand} {target_v_db.model}")
+
+    year_min = target_v_db.year - 6
+    year_max = target_v_db.year + 6
+    power_min = target_v_db.power_hp - 80
+    power_max = target_v_db.power_hp + 80
+    valid_vids = {
+        vid for (vid,) in db.session.query(Vehicle.vehicle_id)
+            .filter(
+                Vehicle.brand == target_v_db.brand,
+                Vehicle.body_type == target_v_db.body_type,
+                Vehicle.year.between(year_min, year_max),
+                Vehicle.power_hp.between(power_min, power_max)
+            )
+            .all()
+        if vid != vehicle_id_target
+    }
+    if not valid_vids:
+        app.logger.info(f"SimilarVehicles: No candidates after attribute filtering for {vehicle_id_target}.")
+        return jsonify([])
+
+
+    item_feats_dict = {}
+    for feat_name in X_ITEMS_PIPELINE_COLS:
+        if feat_name == 'model_grouped':
+            raw_model = getattr(target_v_db, 'model', None)
+            item_feats_dict['model_grouped'] = raw_model if raw_model and raw_model in TOP_MODELS_FOR_GROUPING else 'Other_Model'
+        else: item_feats_dict[feat_name] = getattr(target_v_db, feat_name, None)
+    app.logger.debug(f"SimilarVehicles: Features for pipeline: {item_feats_dict}")
+    try:
+        item_feats_df = pd.DataFrame([item_feats_dict])[X_ITEMS_PIPELINE_COLS]
+        transformed_v_vec = item_pipeline.transform(item_feats_df)
+        app.logger.debug(f"SimilarVehicles: Item vector transformed. Shape: {transformed_v_vec.shape}")
+    except Exception as e:
+        app.logger.error(f"SimilarVehicles: Error in item_pipeline.transform: {e}", exc_info=True)
+        return jsonify([])
+    num_items_for_knn = len(X_items_index) if X_items_index is not None else 0
+    FINAL_N_RECS_CB = 4
+    desired_neighbors_for_query = FINAL_N_RECS_CB + 1
+    k_param_query = min(desired_neighbors_for_query,
+                        item_knn.n_neighbors if hasattr(item_knn, 'n_neighbors') else desired_neighbors_for_query,
+                        num_items_for_knn)
+    if k_param_query <= 0 :
+        app.logger.warning(f"SimilarVehicles: k_param_query is {k_param_query}. Returning [].")
+        return jsonify([])
+    app.logger.debug(f"SimilarVehicles: Querying KNN with k_param_query = {k_param_query}")
+    try:
+        distances, neigh_indices_flat = item_knn.kneighbors(transformed_v_vec, n_neighbors=k_param_query)
+        neigh_indices_flat = neigh_indices_flat.flatten()
+        app.logger.debug(f"SimilarVehicles: Neighbors found. Indices: {neigh_indices_flat}, Distances: {distances.flatten()}")
+    except Exception as e:
+        app.logger.error(f"SimilarVehicles: Error in item_knn.kneighbors: {e}", exc_info=True)
+        return jsonify([])
+    sim_vids_list_str = []
+    for i, idx in enumerate(neigh_indices_flat):
+        if 0 <= idx < num_items_for_knn:
+            item_id_from_X_items_index = X_items_index[idx]
+            if item_id_from_X_items_index != vehicle_id_target:
+                sim_vids_list_str.append(item_id_from_X_items_index)
+            if item_id_from_X_items_index in valid_vids:
+                sim_vids_list_str.append(item_id_from_X_items_index)
+        if len(sim_vids_list_str) >= FINAL_N_RECS_CB: break
+    app.logger.debug(f"SimilarVehicles: Similar vehicle IDs (limited to {FINAL_N_RECS_CB}): {sim_vids_list_str}")
+    top_sim_ids_str = sim_vids_list_str
+    if not top_sim_ids_str:
+        app.logger.info(f"SimilarVehicles: No similar vehicles for {vehicle_id_target}. Returning [].")
+        return jsonify([])
+    recs_db = db.session.query(Vehicle, func.avg(Review.rating).label('avg_r'), func.count(Review.id).label('rev_c'))\
+        .outerjoin(Review).filter(Vehicle.vehicle_id.in_(top_sim_ids_str)).group_by(Vehicle.vehicle_id).all()
+    recs_map_cb = {str(v.vehicle_id): {'data': v, 'avg_r': avg_r, 'rev_c': rev_c} for v, avg_r, rev_c in recs_db}
+    final_recs_cb_list = []
+    for vid_str_sim in top_sim_ids_str:
+        if vid_str_sim in recs_map_cb:
+            v_obj, avg_r, rev_c = recs_map_cb[vid_str_sim]['data'], recs_map_cb[vid_str_sim]['avg_r'], recs_map_cb[vid_str_sim]['rev_c']
+            final_recs_cb_list.append({
+                'vehicle_id': v_obj.vehicle_id, 'brand': v_obj.brand, 'model': v_obj.model, 'body_type': v_obj.body_type,
+                'year': v_obj.year, 'gearbox': v_obj.gearbox, 'drive': v_obj.drive, 'power_hp': v_obj.power_hp, 'seats': v_obj.seats,
+                'price_per_day_usd': float(v_obj.price_per_day_usd), 'image_url': v_obj.image_url,
+                'avg_rating': float(avg_r) if avg_r else None, 'review_count': rev_c})
+    app.logger.debug(f"SimilarVehicles: Final recommendations count: {len(final_recs_cb_list)}")
+    return jsonify(final_recs_cb_list)
+
+@app.route('/api/admin/users', methods=['GET'])
+@admin_required
+def admin_get_users():
+    try:
+        users_query = User.query.join(Role).options(db.joinedload(User.role)).order_by(User.id).all()
+        return jsonify([{'id': u.id, 'username': u.username, 'role': u.role.name if u.role else 'N/A'
+                        } for u in users_query])
+    except Exception as e:
+        app.logger.error(f"Error in admin_get_users: {e}", exc_info=True)
+        return jsonify(error="Failed to retrieve users"), 500
+
+@app.route('/api/admin/users/<int:user_id_to_update>', methods=['PUT'])
+@admin_required
+def admin_update_user(user_id_to_update):
+    user = User.query.get_or_404(user_id_to_update)
+    data = request.get_json()
+    if not data: return jsonify({'error': 'Request body must be JSON'}), 400
+    try:
+        if 'username' in data:
+            new_username = data['username'].strip()
+            if not new_username: return jsonify({'error': 'Username cannot be empty'}), 400
+            if new_username != user.username and User.query.filter(User.id != user_id_to_update, User.username == new_username).first():
+                return jsonify({'error': 'Username already taken'}), 409
+            user.username = new_username
+        if 'password' in data and data['password']:
+            if len(data['password']) < 4: return jsonify({'error': 'Password must be at least 4 characters long'}), 400
+            user.password_hash = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+            app.logger.info(f"Admin updated password for user ID: {user_id_to_update}")
+        if 'role' in data:
+            new_role_name = data['role']
+            current_admin_id = get_current_user_id_from_jwt()
+            if user.id == current_admin_id and user.role.name == 'admin' and new_role_name != 'admin':
+                admin_count = User.query.join(Role).filter(Role.name == 'admin').count()
+                if admin_count <= 1: return jsonify({'error': 'Cannot remove admin role from the last administrator.'}), 403
+            role_obj = Role.query.filter_by(name=new_role_name).first() # Renamed to avoid conflict
+            if not role_obj: return jsonify({'error': f'Role "{new_role_name}" not found'}), 400
+            user.role_id = role_obj.id
+        db.session.commit()
+        app.logger.info(f"Admin updated user ID: {user_id_to_update}. Username: {user.username}, Role: {user.role.name}")
+        return jsonify({'id': user.id, 'username': user.username, 'role': user.role.name if user.role else 'N/A'})
+    except ValueError as e:
+        app.logger.error(f"Admin update user: Error parsing current admin ID from JWT: {e}")
+        return jsonify({'error': 'Internal server error processing admin identity.'}), 500
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error updating user {user_id_to_update}: {e}", exc_info=True)
+        return jsonify(error="Failed to update user details."), 500
+
+@app.route('/api/admin/users/<int:user_id_to_delete>', methods=['DELETE'])
+@admin_required
+def admin_delete_user(user_id_to_delete):
+    try:
+        current_admin_id = get_current_user_id_from_jwt()
+        if user_id_to_delete == current_admin_id:
+            return jsonify({'error': 'You cannot delete your own account.'}), 403
+
+        user_to_del = User.query.get_or_404(user_id_to_delete)
+
+        Review.query.filter_by(user_id=user_id_to_delete).delete()
+        orders = Order.query.filter_by(user_id=user_id_to_delete).all()
+        for order in orders:
+            OrderItem.query.filter_by(order_id=order.id).delete()
+            db.session.delete(order)
+
+        db.session.delete(user_to_del)
+        db.session.commit()
+
+        app.logger.info(f"Admin deleted user ID: {user_id_to_delete}")
+        return jsonify({'message': f'User ID {user_id_to_delete} deleted successfully.'}), 200
+
+    except HTTPException as he:
+        return jsonify({'error': he.description}), he.code
+
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error deleting user {user_id_to_delete}: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to delete user due to server error.'}), 500
+
+@app.route('/api/admin/vehicles', methods=['GET'])
+@admin_required
+def admin_get_all_vehicles():
+    try:
+        vehicles_query = Vehicle.query.order_by(Vehicle.brand, Vehicle.model, Vehicle.year).all()
+        return jsonify([{'vehicle_id': v.vehicle_id, 'brand': v.brand, 'model': v.model,
+                         'body_type': v.body_type, 'year': v.year, 'gearbox': v.gearbox,
+                         'drive': v.drive, 'power_hp': v.power_hp, 'seats': v.seats,
+                         'price_per_day_usd': float(v.price_per_day_usd), 'image_url': v.image_url
+                        } for v in vehicles_query])
+    except Exception as e:
+        app.logger.error(f"Error in admin_get_all_vehicles: {e}", exc_info=True)
+        return jsonify(error="Failed to retrieve vehicles for admin panel."), 500
+
+@app.route('/api/admin/vehicles', methods=['POST'])
+@admin_required
+@cross_origin(origins="http://localhost:5173")
+def admin_add_new_vehicle():
+    try:
+        data = request.get_json(force=True)
+    except Exception:
+        return jsonify(error="Request body must be valid JSON."), 400
+
+    if not data:
+        return jsonify(error="Request body cannot be empty."), 400
+
+    vid = data.get('vehicle_id')
+    if not vid or not isinstance(vid, str) or not vid.strip():
+        return jsonify(error="Field 'vehicle_id' (UUID) is required."), 400
+    vid = vid.strip()
+    if Vehicle.query.get(vid):
+        return jsonify(error=f"Vehicle with ID '{vid}' already exists."), 409
+
+    required = ['brand', 'body_type', 'year', 'gearbox', 'drive', 'power_hp', 'seats', 'price_per_day_usd']
+    missing = [f for f in required if data.get(f) is None or str(data.get(f)).strip() == '']
+    if missing:
+        return jsonify(error=f"Missing or empty required fields: {', '.join(missing)}."), 400
+
+    try:
+        brand       = str(data['brand']).strip()
+        body_type   = str(data['body_type']).strip()
+        year        = int(data['year'])
+        gearbox     = str(data['gearbox']).strip()
+        drive       = str(data['drive']).strip()
+        power_hp    = int(data['power_hp'])
+        seats       = int(data['seats'])
+        price       = Decimal(str(data['price_per_day_usd']))
+        image_url   = str(data.get('image_url','')).strip() or None
+
+        if not brand:     return jsonify(error="Brand cannot be empty."), 400
+        if not body_type: return jsonify(error="Body type cannot be empty."), 400
+        now_year = datetime.now().year
+        if not (1900 <= year <= now_year + 2):
+            return jsonify(error=f"Year must be between 1900 and {now_year+2}."), 400
+        if not gearbox:   return jsonify(error="Gearbox cannot be empty."), 400
+        if not drive:     return jsonify(error="Drive cannot be empty."), 400
+        if not (0 < power_hp < 5000):
+            return jsonify(error="Power_hp must be >0 and <5000."), 400
+        if not (1 <= seats <= 20):
+            return jsonify(error="Seats must be between 1 and 20."), 400
+        if price <= 0:
+            return jsonify(error="Price_per_day_usd must be positive."), 400
+
+        new_v = Vehicle(
+            vehicle_id=vid,
+            brand=brand,
+            model=str(data.get('model','')).strip() or None,
+            body_type=body_type,
+            year=year,
+            gearbox=gearbox,
+            drive=drive,
+            power_hp=power_hp,
+            seats=seats,
+            price_per_day_usd=price,
+            image_url=image_url
+        )
+        db.session.add(new_v)
+        db.session.commit()
+
+        app.logger.info(f"Admin created vehicle {vid} ({brand} {new_v.model or ''}).")
+        return jsonify({
+            'vehicle_id': vid,
+            'brand': brand,
+            'model': new_v.model,
+            'body_type': body_type,
+            'year': year,
+            'gearbox': gearbox,
+            'drive': drive,
+            'power_hp': power_hp,
+            'seats': seats,
+            'price_per_day_usd': float(price),
+            'image_url': image_url
+        }), 201
+
+    except ValueError as ve:
+        db.session.rollback()
+        app.logger.warning(f"ValueError in admin_add_new_vehicle: {ve}. Payload: {data}")
+        return jsonify(error=f"Invalid data type: {ve}"), 400
+
+    except HTTPException as he:
+        return jsonify(error=str(he)), he.code
+
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Unexpected error in admin_add_new_vehicle: {e}", exc_info=True)
+        return jsonify(error="Server error while creating vehicle."), 500
+
+@app.route('/api/admin/vehicles/<string:vehicle_id>', methods=['PUT'])
+@admin_required
+def admin_edit_vehicle(vehicle_id):
+    vehicle = Vehicle.query.get_or_404(vehicle_id)
+    data = request.get_json()
+    if not data: return jsonify({'error': 'Request body must be JSON and not empty.'}), 400
+    try:
+        if 'brand' in data:
+            brand_val = str(data['brand']).strip()
+            if not brand_val: return jsonify({'error': 'Brand cannot be empty.'}), 400
+            vehicle.brand = brand_val
+        if 'model' in data: vehicle.model = str(data.get('model', '')).strip() or None
+        if 'body_type' in data:
+            body_type_val = str(data['body_type']).strip()
+            if not body_type_val: return jsonify({'error': 'Body type cannot be empty.'}), 400
+            vehicle.body_type = body_type_val
+        if 'year' in data:
+            year_val = int(data['year'])
+            if not (1900 <= year_val <= datetime.now().year + 2): return jsonify({'error': f'Invalid year: {year_val}.'}), 400
+            vehicle.year = year_val
+        if 'gearbox' in data:
+            gearbox_val = str(data['gearbox']).strip()
+            if not gearbox_val: return jsonify({'error': 'Gearbox cannot be empty.'}), 400
+            vehicle.gearbox = gearbox_val
+        if 'drive' in data:
+            drive_val = str(data['drive']).strip()
+            if not drive_val: return jsonify({'error': 'Drive type cannot be empty.'}), 400
+            vehicle.drive = drive_val
+        if 'power_hp' in data:
+            power_hp_val = int(data['power_hp'])
+            if not (0 < power_hp_val < 5000): return jsonify({'error': f'Invalid power_hp: {power_hp_val}.'}), 400
+            vehicle.power_hp = power_hp_val
+        if 'seats' in data:
+            seats_val = int(data['seats'])
+            if not (1 <= seats_val <= 20): return jsonify({'error': f'Invalid seats: {seats_val}.'}), 400
+            vehicle.seats = seats_val
+        if 'price_per_day_usd' in data:
+            price_val = Decimal(data['price_per_day_usd'])
+            if not (price_val > 0): return jsonify({'error': 'Price must be a positive value.'}), 400
+            vehicle.price_per_day_usd = price_val
+        if 'image_url' in data: vehicle.image_url = str(data.get('image_url', '')).strip() or None
+        db.session.commit()
+        app.logger.info(f"Admin updated vehicle ID: {vehicle_id}.")
+        return jsonify({
+            'vehicle_id': vehicle.vehicle_id, 'brand': vehicle.brand, 'model': vehicle.model,
+            'body_type': vehicle.body_type, 'year': vehicle.year, 'gearbox': vehicle.gearbox,
+            'drive': vehicle.drive, 'power_hp': vehicle.power_hp, 'seats': vehicle.seats,
+            'price_per_day_usd': float(vehicle.price_per_day_usd), 'image_url': vehicle.image_url
+        })
+    except ValueError as ve:
+        db.session.rollback()
+        app.logger.warning(f"Admin update vehicle ID {vehicle_id}: Value error - {ve}. Data: {data}")
+        return jsonify({'error': f'Invalid data type for a field: {ve}.'}), 400
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error updating vehicle ID {vehicle_id}: {e}. Data: {data}", exc_info=True)
+        return jsonify({'error': f'Could not update vehicle due to a server error.'}), 500
+
+@app.route('/api/admin/vehicles/<string:vehicle_id>', methods=['DELETE'])
+@admin_required
+@cross_origin(origins="http://localhost:5173")
+def admin_remove_vehicle(vehicle_id):
+    try:
+        vehicle = Vehicle.query.get_or_404(vehicle_id)
+
+        Review.query.filter_by(vehicle_id=vehicle_id).delete(synchronize_session=False)
+
+        OrderItem.query.filter_by(vehicle_id=vehicle_id).delete(synchronize_session=False)
+
+        orphan_orders = (
+            Order.query
+                 .outerjoin(OrderItem, Order.id == OrderItem.order_id)
+                 .filter(OrderItem.id == None)
+                 .all()
+        )
+        for o in orphan_orders:
+            db.session.delete(o)
+
+        CartItem.query.filter_by(vehicle_id=vehicle_id).delete(synchronize_session=False)
+
+        db.session.delete(vehicle)
+        db.session.commit()
+
+        app.logger.info(f"Admin deleted vehicle {vehicle_id}: "
+                        f"{len(orphan_orders)} orphan orders cleaned.")
+        return jsonify({'message': f'Vehicle {vehicle_id} deleted successfully.'}), 200
+
+    except HTTPException as he:
+        return jsonify({'error': he.description}), he.code
+
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error deleting vehicle {vehicle_id}: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to delete vehicle due to server error.'}), 500
+
+
+if __name__ == '__main__':
+    app.logger.info("Starting Flask development server...")
+    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
+```
+
+### `backend\create_admin.py`
+
+```python
+from app import app, db, bcrypt
+from models import User, Role
+
+def add_admin_user(username, password):
+    with app.app_context():
+        admin_role = Role.query.filter_by(name='admin').first()
+        if not admin_role:
+            print("Роль 'admin' не найдена. Создаем...")
+            admin_role = Role(name='admin')
+            user_role = Role.query.filter_by(name='user').first()
+            if not user_role:
+                user_role = Role(name='user')
+                db.session.add(user_role)
+            db.session.add(admin_role)
+            db.session.commit()
+            print(f"Роль 'admin' создана с ID: {admin_role.id}")
+
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user:
+            print(f"Пользователь '{username}' уже существует.")
+            return
+
+        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+        new_admin = User(username=username, password_hash=hashed_password, role_id=admin_role.id)
+        db.session.add(new_admin)
+        db.session.commit()
+        print(f"Администратор '{username}' успешно создан с ID: {new_admin.id} и ролью 'admin'.")
+
+if __name__ == '__main__':
+    admin_username = input("Введите имя пользователя для администратора: ")
+    admin_password = input("Введите пароль для администратора: ")
+    add_admin_user(admin_username, admin_password)
+```
+
+### `backend\database.py`
+
+```python
+from flask_sqlalchemy import SQLAlchemy
+db = SQLAlchemy()
+```
+
+### `backend\load_data.py`
+
+```python
+import csv
+import os
+import logging
+from decimal import Decimal
+
+from flask_bcrypt import Bcrypt
+from database import db
+from models import User, Role, Order, OrderItem, Review, Vehicle
+from app import app
+
+# —————————————————————————————————————————————————————————
+# Настройка логирования для скрипта
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - [LOAD_DATA] - %(levelname)s - %(message)s'
+    )
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+logger.propagate = False
+
+bcrypt = Bcrypt(app)
+
+BASE_DIR            = os.path.dirname(os.path.abspath(__file__))
+USERS_CSV_PATH      = os.path.join(BASE_DIR, 'data', 'users.csv')
+REVIEWS_CSV_PATH    = os.path.join(BASE_DIR, 'data', 'reviews.csv')
+VEHICLES_CSV_PATH   = os.path.join(BASE_DIR, 'data', 'project_vehicle_dataset.csv')
+
+def load_vehicles():
+    """Загружает автомобили из CSV, если таблица пуста."""
+    if Vehicle.query.first():
+        logger.info("Vehicles table is not empty, skipping CSV load for vehicles.")
+        return
+
+    logger.info(f"Attempting to load vehicles from: {VEHICLES_CSV_PATH}")
+    if not os.path.exists(VEHICLES_CSV_PATH):
+        logger.warning(f"Vehicles CSV file not found at {VEHICLES_CSV_PATH}.")
+        return
+
+    vehicles_to_add = []
+    with open(VEHICLES_CSV_PATH, newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        required = [
+            'vehicle_id', 'brand', 'body_type', 'year', 'gearbox',
+            'drive', 'power_hp', 'seats', 'price_per_day_usd'
+        ]
+        for i, row in enumerate(reader, start=1):
+            if not all(row.get(col, '').strip() for col in required):
+                logger.warning(f"Row {i}: missing required fields, skipping.")
+                continue
+            try:
+                vid = row['vehicle_id'].strip()
+                model_val = row.get('model', '').strip() or None
+                img = row.get('image', '').strip()
+                img = None if not img or img.lower() == 'n/a' else img.strip()
+
+                v = Vehicle(
+                    vehicle_id=vid,
+                    brand=row['brand'].strip(),
+                    model=model_val,
+                    body_type=row['body_type'].strip(),
+                    year=int(row['year']),
+                    gearbox=row['gearbox'].strip(),
+                    drive=row['drive'].strip(),
+                    power_hp=int(row['power_hp']),
+                    seats=int(row['seats']),
+                    price_per_day_usd=Decimal(row['price_per_day_usd']),
+                    image_url=img
+                )
+                vehicles_to_add.append(v)
+            except Exception as e:
+                logger.error(f"Row {i}: error parsing vehicle: {e}", exc_info=False)
+
+    if vehicles_to_add:
+        db.session.bulk_save_objects(vehicles_to_add)
+        db.session.commit()
+        logger.info(f"✔ Loaded {len(vehicles_to_add)} vehicles.")
+    else:
+        logger.info("No vehicles loaded (table empty or all rows invalid).")
+
+def load_users_and_roles():
+    """Создаёт роли и загружает пользователей из CSV, если таблица пуста.
+       Гарантирует, что хотя бы один админ есть всегда."""
+    user_role  = Role.query.filter_by(name='user').first()
+    admin_role = Role.query.filter_by(name='admin').first()
+    if not user_role:
+        user_role = Role(name='user')
+        db.session.add(user_role)
+        logger.info("Created 'user' role.")
+    if not admin_role:
+        admin_role = Role(name='admin')
+        db.session.add(admin_role)
+        logger.info("Created 'admin' role.")
+    db.session.commit()
+
+    if User.query.first():
+        logger.info("Users table is not empty, skipping CSV load for users.")
+    else:
+        if os.path.exists(USERS_CSV_PATH):
+            logger.info(f"Attempting to load users from: {USERS_CSV_PATH}")
+            added = 0
+            with open(USERS_CSV_PATH, newline='', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for i, row in enumerate(reader, start=1):
+                    try:
+                        uid   = int(row['id'])
+                        name  = row['name'].strip()
+                        pw    = row['password'].strip()
+                        if not name or not pw:
+                            logger.warning(f"Row {i}: empty name or password, skipping.")
+                            continue
+                        pw_hash = bcrypt.generate_password_hash(pw).decode('utf-8')
+                        role_id = user_role.id
+                        if row.get('role', '').strip().lower() == 'admin':
+                            role_id = admin_role.id
+
+                        u = User(id=uid, username=name, password_hash=pw_hash, role_id=role_id)
+                        db.session.add(u)
+                        added += 1
+                    except Exception as e:
+                        logger.error(f"Row {i}: error parsing user: {e}", exc_info=False)
+
+            if added:
+                db.session.commit()
+                logger.info(f"✔ Loaded {added} users from CSV.")
+            else:
+                logger.info("No users loaded from CSV (all rows invalid).")
+        else:
+            logger.warning(f"Users CSV not found at {USERS_CSV_PATH}, skipping CSV load.")
+
+    admin_exists = User.query.join(Role).filter(Role.name=='admin').first()
+    if not admin_exists:
+        logger.info("No admin users found, creating default admin (admin/admin).")
+        pw = bcrypt.generate_password_hash('admin').decode('utf-8')
+        default_admin = User(username='admin', password_hash=pw, role_id=admin_role.id)
+        db.session.add(default_admin)
+        db.session.commit()
+        logger.info("✔ Default admin user created: login=admin, password=admin.")
+
+def load_reviews_and_orders():
+    """Загружает отзывы из CSV и создаёт для каждого отзыв фейковый заказ."""
+    if Review.query.first():
+        logger.info("Reviews table is not empty, skipping CSV load for reviews.")
+        return
+    if not Vehicle.query.first() or not User.query.first():
+        logger.info("Cannot load reviews: vehicles or users table is empty.")
+        return
+
+    logger.info(f"Attempting to load reviews/orders from: {REVIEWS_CSV_PATH}")
+    if not os.path.exists(REVIEWS_CSV_PATH):
+        logger.warning(f"Reviews CSV file not found at {REVIEWS_CSV_PATH}.")
+        return
+
+    valid_vids  = {str(v.vehicle_id) for v in Vehicle.query.with_entities(Vehicle.vehicle_id)}
+    valid_uids  = {u.id for u in User.query.with_entities(User.id)}
+
+    rev_count = 0
+    ord_count = 0
+    with open(REVIEWS_CSV_PATH, newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for i, row in enumerate(reader, start=1):
+            try:
+                uid_str = row['user_id'].strip()
+                vid     = row['vehicle_id'].strip()
+                uid     = int(uid_str)
+                rating  = float(row['rating'].strip())
+                comment = row.get('comment', '').strip() or None
+
+                if uid not in valid_uids:
+                    logger.warning(f"Row {i}: user {uid} not found, skipping.")
+                    continue
+                if vid not in valid_vids:
+                    logger.warning(f"Row {i}: vehicle '{vid}' not found, skipping.")
+                    continue
+                if Review.query.filter_by(user_id=uid, vehicle_id=vid).first():
+                    continue
+
+                order = Order(user_id=uid)
+                db.session.add(order)
+                db.session.flush()
+                ord_count += 1
+
+                veh = Vehicle.query.get(vid)
+                price = veh.price_per_day_usd if veh else Decimal('0.00')
+                oi = OrderItem(order_id=order.id, vehicle_id=vid, price=price)
+                db.session.add(oi)
+
+                rev = Review(
+                    user_id=uid,
+                    vehicle_id=vid,
+                    order_id=order.id,
+                    rating=int(rating*2)/2.0,
+                    comment=comment
+                )
+                db.session.add(rev)
+                rev_count += 1
+
+            except Exception as e:
+                logger.error(f"Row {i}: error processing review: {e}", exc_info=False)
+                db.session.rollback()
+                continue
+
+    if rev_count or ord_count:
+        db.session.commit()
+        logger.info(f"✔ Loaded {rev_count} reviews and created {ord_count} orders.")
+    else:
+        logger.info("No reviews loaded (table empty or all rows invalid).")
+
+if __name__ == "__main__":
+    with app.app_context():
+        logger.info("=== Data loading started ===")
+        load_users_and_roles()
+        load_vehicles()
+        load_reviews_and_orders()
+        logger.info("=== Data loading finished ===")
+
+```
+
+### `backend\manage.py`
+
+```python
+from flask_migrate import Migrate, MigrateCommand
+from flask_script import Manager
+from app import app, db
+
+migrate = Migrate(app, db)
+manager = Manager(app)
+
+manager.add_command('db', MigrateCommand)
+
+if __name__ == '__main__': 
+    manager.run()
+```
+
+### `backend\models.py`
+
+```python
+from database import db
+from datetime import datetime
+
+class Role(db.Model):
+    __tablename__ = 'roles'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True, nullable=False)
+    users = db.relationship('User', backref='role', lazy=True)
+
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(64), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)
+    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'), nullable=False)
+    cart_items = db.relationship('CartItem', backref='user', lazy=True, cascade="all, delete-orphan")
+    orders     = db.relationship('Order',    backref='user', lazy=True)
+    reviews    = db.relationship('Review',   backref='user', lazy=True)
+
+class Vehicle(db.Model):
+    __tablename__ = 'vehicles'
+    vehicle_id        = db.Column(db.String(36), primary_key=True)
+    brand             = db.Column(db.String(64), nullable=False)
+    model             = db.Column(db.String(128), nullable=True)
+    body_type         = db.Column(db.String(128), nullable=False)
+    year              = db.Column(db.Integer, nullable=False)
+    gearbox           = db.Column(db.String(30), nullable=False)
+    drive             = db.Column(db.String(10), nullable=False)
+    power_hp          = db.Column(db.Integer, nullable=False)
+    seats             = db.Column(db.Integer, nullable=False)
+    price_per_day_usd = db.Column(db.Numeric(10, 2), nullable=False)
+    image_url         = db.Column(db.String(2048), nullable=True)
+    reviews           = db.relationship('Review', backref='vehicle', lazy=True)
+
+class CartItem(db.Model):
+    __tablename__ = 'cart_items'
+    id         = db.Column(db.Integer, primary_key=True)
+    user_id    = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    vehicle_id = db.Column(db.String(36), db.ForeignKey('vehicles.vehicle_id'), nullable=False)
+    vehicle    = db.relationship('Vehicle', lazy='joined')
+    
+    __table_args__ = ( 
+        db.UniqueConstraint('user_id', 'vehicle_id', name='uq_user_vehicle_cart'),
+    )
+
+class Order(db.Model):
+    __tablename__ = 'orders'
+    id          = db.Column(db.Integer, primary_key=True)
+    user_id     = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+    items       = db.relationship('OrderItem', backref='order', lazy=True, cascade="all, delete-orphan")
+    reviews     = db.relationship('Review', backref='order', lazy=True)
+
+class OrderItem(db.Model):
+    __tablename__ = 'order_items'
+    id         = db.Column(db.Integer, primary_key=True)
+    order_id   = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
+    vehicle_id = db.Column(db.String(36), db.ForeignKey('vehicles.vehicle_id'), nullable=False)
+    price      = db.Column(db.Numeric(10, 2), nullable=False)
+    vehicle    = db.relationship('Vehicle', lazy='joined')
+
+class Review(db.Model):
+    __tablename__ = 'reviews'
+    id         = db.Column(db.Integer, primary_key=True)
+    user_id    = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    vehicle_id = db.Column(db.String(36), db.ForeignKey('vehicles.vehicle_id'), nullable=False)
+    order_id   = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
+    rating     = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    comment    = db.Column(db.Text, nullable=True)
+
+    def __repr__(self):
+        return f"<Review user:{self.user_id} vehicle:'{self.vehicle_id}' order:{self.order_id} rating:{self.rating}>"
+```
+
+### `backend\train_recommendation.py`
+
+```python
+import pandas as pd
+import numpy as np
+import pickle
+from sqlalchemy import create_engine
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics.pairwise import cosine_similarity
+from surprise import Dataset, Reader, KNNBasic
+from collections import defaultdict
+
+DB_USER = "username"
+DB_PASSWORD = "password"
+DB_HOST = "localhost"
+DB_NAME = "car_rental_db"
+
+USER_CF_MODEL_FILE    = 'user_knn_model.pkl'
+CONTENT_MODEL_FILE    = 'content_model.pkl'
+HYBRID_MODEL_FILE     = 'hybrid_model.pkl'
+
+ALPHA = 0.7       
+K_NEIGHBORS = 40 
+TOP_K = 10         
+
+
+def load_data():
+    """
+    Загружает данные из базы: заказы, отзывы и характеристики автомобилей.
+    Возвращает три DataFrame: df_orders, df_reviews, df_cars.
+    """
+    engine = create_engine(
+        f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
+    )
+    df_orders  = pd.read_sql("SELECT user_id, car_id, order_date FROM orders;", engine)
+    df_reviews = pd.read_sql("SELECT user_id, car_id, rating FROM reviews;", engine)
+    df_cars    = pd.read_sql("SELECT * FROM cars;", engine)
+    return df_orders, df_reviews, df_cars
+
+
+def prepare_interactions(df_orders, df_reviews):
+    """
+    Объединяет df_orders и df_reviews, заполняет отсутствующие рейтинги нейтральным значением 3.
+    Возвращает df_interactions с колонками: user_id, car_id, order_date, rating.
+    """
+    df = pd.merge(df_orders, df_reviews, on=['user_id', 'car_id'], how='left')
+    df['rating'] = df['rating'].fillna(3.0)
+    df['order_date'] = pd.to_datetime(df['order_date'])
+    df.sort_values('order_date', inplace=True)
+    return df
+
+
+def train_test_split(df_interactions):
+    """
+    Разделяет взаимодействия на train/test по правилу: последнее взаимодействие каждого пользователя в test.
+    Возвращает df_train, df_test.
+    """
+    train_list, test_list = [], []
+    for uid, group in df_interactions.groupby('user_id'):
+        records = group.to_dict('records')
+        if len(records) <= 1:
+            test_list.extend(records)
+        else:
+            *train_entries, test_entry = records
+            train_list.extend(train_entries)
+            test_list.append(test_entry)
+    df_train = pd.DataFrame(train_list)
+    df_test  = pd.DataFrame(test_list)
+    return df_train, df_test
+
+
+def build_cf_model(df_train):
+    """
+    Обучает user-based kNN модель на Surprise и возвращает обученный алгоритм.
+    """
+    reader = Reader(rating_scale=(1,5))
+    data = Dataset.load_from_df(df_train[['user_id','car_id','rating']], reader)
+    trainset = data.build_full_trainset()
+    sim_options = {'name': 'cosine', 'user_based': True}
+    algo = KNNBasic(k=K_NEIGHBORS, sim_options=sim_options)
+    algo.fit(trainset)
+    return algo
+
+
+def build_content_model(df_cars):
+    """
+    Создает матрицу признаков для автомобилей и вычисляет матрицу косинусных сходств.
+    Возвращает df_features (DataFrame с индексом car_id) и content_sim (np.ndarray).
+    """
+    df = df_cars.copy()
+    df.set_index('car_id', inplace=True)
+    features = ['model','drive_type','year','power_hp','seats']
+    df_feat = df[features]
+    df_feat = pd.get_dummies(df_feat, columns=['model','drive_type'], drop_first=False)
+    scaler = MinMaxScaler()
+    df_feat[['year','power_hp','seats']] = scaler.fit_transform(df_feat[['year','power_hp','seats']])
+    X = df_feat.values
+    content_sim = cosine_similarity(X, X)
+    return df_feat, content_sim
+
+
+def build_user_history(df_train):
+    """
+    Строит словарь: user_id -> список car_id из train.
+    """
+    return df_train.groupby('user_id')['car_id'].apply(list).to_dict()
+
+
+def recommend_content(user_id, df_feat, content_sim, user_history, top_n=TOP_K):
+    cars = df_feat.index.tolist()
+    watched = user_history.get(user_id, [])
+    if not watched:
+        return []
+    indices = [cars.index(cid) for cid in watched if cid in cars]
+    sim_scores = content_sim[:, indices]
+    mean_sim = sim_scores.mean(axis=1)
+    candidates = [(cars[i], mean_sim[i]) for i in range(len(cars)) if cars[i] not in watched]
+    candidates.sort(key=lambda x: x[1], reverse=True)
+    return candidates[:top_n]
+
+
+def recommend_hybrid(user_id, cf_algo, df_feat, content_sim, user_history,
+                     item_mean, popular, alpha=ALPHA, top_n=TOP_K):
+    cars = df_feat.index.tolist()
+    watched = set(user_history.get(user_id, []))
+    cf_scores = {}
+    for cid in cars:
+        if cid in watched: continue
+        try:
+            cf_scores[cid] = cf_algo.predict(user_id, cid).est
+        except:
+            cf_scores[cid] = 0
+    cb_scores = {}
+    if watched:
+        idxs = [cars.index(cid) for cid in watched if cid in cars]
+        sim_scores = content_sim[:, idxs] if idxs else np.zeros_like(content_sim)
+        mean_sim = sim_scores.mean(axis=1)
+        for i, cid in enumerate(cars):
+            if cid in watched: continue
+            cb_scores[cid] = mean_sim[i] * 5
+    else:
+        return popular[:top_n]
+    hybrid = {}
+    for cid in cf_scores:
+        hybrid[cid] = alpha * cf_scores.get(cid,0) + (1-alpha)*cb_scores.get(cid,0)
+    ranked = sorted(hybrid.items(), key=lambda x: x[1], reverse=True)
+    return ranked[:top_n]
+
+
+def evaluate(recommend_func, df_test, user_history, name, top_n=TOP_K):
+    relevant = defaultdict(set)
+    for _, r in df_test.iterrows():
+        relevant[r['user_id']].add(r['car_id'])
+    precisions, recalls, aps = [],[],[]
+    for uid, trues in relevant.items():
+        recs = [cid for cid,score in recommend_func(uid)]
+        if not recs: continue
+        hits = sum(1 for cid in recs if cid in trues)
+        precisions.append(hits/top_n)
+        recalls.append(hits/len(trues))
+        cum,ap = 0,0
+        for i,cid in enumerate(recs,1):
+            if cid in trues:
+                cum += 1
+                ap += cum/i
+        aps.append(ap/len(trues))
+    print(f"{name}: P@{top_n}={np.mean(precisions):.3f}, "
+          f"R@{top_n}={np.mean(recalls):.3f}, MAP@{top_n}={np.mean(aps):.3f}")
+
+
+def main():
+    df_orders, df_reviews, df_cars = load_data()
+    df_int = prepare_interactions(df_orders, df_reviews)
+    df_train, df_test = train_test_split(df_int)
+
+    cf_algo = build_cf_model(df_train)
+    df_feat, content_sim = build_content_model(df_cars)
+    user_hist = build_user_history(df_train)
+
+    item_mean = df_train.groupby('car_id')['rating'].mean().to_dict()
+    popular = sorted(item_mean.items(), key=lambda x: x[1], reverse=True)
+
+    evaluate(lambda u: recommend_hybrid(u, cf_algo, df_feat, content_sim, user_hist, item_mean, popular),
+             df_test, user_hist, "Hybrid")
+    evaluate(lambda u: recommend_content(u, df_feat, content_sim, user_hist),
+             df_test, user_hist, "Content-based")
+    evaluate(lambda u: recommend_hybrid(u, cf_algo, df_feat, content_sim, user_hist, item_mean, popular, alpha=1.0),
+             df_test, user_hist, "User-based CF")
+
+    with open(USER_CF_MODEL_FILE, 'wb') as f:
+        pickle.dump(cf_algo, f)
+    content_data = {'features': df_feat, 'cars': df_feat.index.tolist()}
+    with open(CONTENT_MODEL_FILE, 'wb') as f:
+        pickle.dump(content_data, f)
+    hybrid_data = {'cf': cf_algo, 'features': df_feat, 'sim': content_sim,
+                   'alpha': ALPHA, 'popular': popular}
+    with open(HYBRID_MODEL_FILE, 'wb') as f:
+        pickle.dump(hybrid_data, f)
+
+    print("Models saved.")
+
+if __name__ == '__main__':
+    main()
+```
+
