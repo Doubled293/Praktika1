@@ -60,8 +60,10 @@ from models import Role, User, Vehicle, CartItem, Order, OrderItem, Review
 app = Flask(__name__)
 
 
+# Конфигурация CORS
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}}, supports_credentials=True)
 
+# Конфигурация логгера
 app.logger.setLevel(logging.DEBUG)
 for handler in app.logger.handlers[:]:
     app.logger.removeHandler(handler)
@@ -72,9 +74,11 @@ app.logger.addHandler(log_handler)
 app.logger.propagate = False
 app.logger.info("Flask application logger configured.")
 
+# Логирование статуса артефактов
 app_logger_for_artifacts = app.logger
 app_logger_for_artifacts.info(f"Type of user_knn: {type(user_knn)}")
 
+# Конфигурация приложения
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'mysql+pymysql://root:PisyaMorja123@localhost/db_name')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'your-super-secret-fallback-key-for-admin-panel')
@@ -83,6 +87,7 @@ db.init_app(app)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 
+# Инициализация БД и загрузка данных
 with app.app_context():
     app.logger.info("Application context entered for DB setup.")
     db.create_all()
