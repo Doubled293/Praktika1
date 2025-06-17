@@ -1464,7 +1464,6 @@ class Review(db.Model):
 
 ### `backend\train_recommendation.py`
 
-```python
 import pandas as pd
 import numpy as np
 import pickle
@@ -1474,198 +1473,199 @@ from sklearn.metrics.pairwise import cosine_similarity
 from surprise import Dataset, Reader, KNNBasic
 from collections import defaultdict
 
-DB_USER = "username"
-DB_PASSWORD = "password"
+DB_USER = "root"
+DB_PASSWORD = "PisyaMorja123"
 DB_HOST = "localhost"
-DB_NAME = "car_rental_db"
+DB_PORT     = 3306
+DB_NAME = "db_name"
 
-USER_CF_MODEL_FILE    = 'user_knn_model.pkl'
-CONTENT_MODEL_FILE    = 'content_model.pkl'
-HYBRID_MODEL_FILE     = 'hybrid_model.pkl'
+USER_CF_MODEL_FILE = 'user_knn_model.pkl'
+CONTENT_MODEL_FILE = 'content_model.pkl'
+HYBRID_MODEL_FILE  = 'hybrid_model.pkl'
 
-ALPHA = 0.7       
-K_NEIGHBORS = 40 
-TOP_K = 10         
+ALPHA       = 0.7
+K_NEIGHBORS = 40
+TOP_K       = 10
 
-
+# Загрузка данных
 def load_data():
-    """
-    Загружает данные из базы: заказы, отзывы и характеристики автомобилей.
-    Возвращает три DataFrame: df_orders, df_reviews, df_cars.
-    """
-    engine = create_engine(
-        f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
+    conn_str = (
+        f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}"
+        f"@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
-    df_orders  = pd.read_sql("SELECT user_id, car_id, order_date FROM orders;", engine)
-    df_reviews = pd.read_sql("SELECT user_id, car_id, rating FROM reviews;", engine)
-    df_cars    = pd.read_sql("SELECT * FROM cars;", engine)
+    engine = create_engine(conn_str)
+
+    # истории заказов
+    df_orders = pd.read_sql(
+        """
+        SELECT
+          o.user_id,
+          oi.vehicle_id     AS car_id,
+          o.created_at      AS order_date
+        FROM orders AS o
+        JOIN order_items AS oi
+          ON o.id = oi.order_id;
+        """,
+        engine
+    )
+
+    # отзывы
+    df_reviews = pd.read_sql(
+        "SELECT user_id, vehicle_id AS car_id, rating FROM reviews;",
+        engine
+    )
+
+    # характеристики авто
+    df_cars = pd.read_sql(
+        """
+        SELECT
+          vehicle_id        AS car_id,
+          model,
+          drive             AS drive_type,
+          year,
+          power_hp,
+          seats
+        FROM vehicles;
+        """,
+        engine
+    )
+
     return df_orders, df_reviews, df_cars
 
 
+# Предобработка
 def prepare_interactions(df_orders, df_reviews):
-    """
-    Объединяет df_orders и df_reviews, заполняет отсутствующие рейтинги нейтральным значением 3.
-    Возвращает df_interactions с колонками: user_id, car_id, order_date, rating.
-    """
-    df = pd.merge(df_orders, df_reviews, on=['user_id', 'car_id'], how='left')
+    df = pd.merge(df_orders, df_reviews, on=['user_id','car_id'], how='left')
     df['rating'] = df['rating'].fillna(3.0)
     df['order_date'] = pd.to_datetime(df['order_date'])
     df.sort_values('order_date', inplace=True)
     return df
 
-
-def train_test_split(df_interactions):
-    """
-    Разделяет взаимодействия на train/test по правилу: последнее взаимодействие каждого пользователя в test.
-    Возвращает df_train, df_test.
-    """
+def train_test_split(df_int):
     train_list, test_list = [], []
-    for uid, group in df_interactions.groupby('user_id'):
-        records = group.to_dict('records')
-        if len(records) <= 1:
-            test_list.extend(records)
+    for uid, grp in df_int.groupby('user_id'):
+        recs = grp.to_dict('records')
+        if len(recs) <= 1:
+            test_list.extend(recs)
         else:
-            *train_entries, test_entry = records
+            *train_entries, test_entry = recs
             train_list.extend(train_entries)
             test_list.append(test_entry)
-    df_train = pd.DataFrame(train_list)
-    df_test  = pd.DataFrame(test_list)
-    return df_train, df_test
+    return pd.DataFrame(train_list), pd.DataFrame(test_list)
 
 
+# Построение моделей
 def build_cf_model(df_train):
-    """
-    Обучает user-based kNN модель на Surprise и возвращает обученный алгоритм.
-    """
-    reader = Reader(rating_scale=(1,5))
-    data = Dataset.load_from_df(df_train[['user_id','car_id','rating']], reader)
+    reader   = Reader(rating_scale=(1,5))
+    data     = Dataset.load_from_df(df_train[['user_id','car_id','rating']], reader)
     trainset = data.build_full_trainset()
-    sim_options = {'name': 'cosine', 'user_based': True}
-    algo = KNNBasic(k=K_NEIGHBORS, sim_options=sim_options)
+    algo     = KNNBasic(k=K_NEIGHBORS, sim_options={'name':'cosine','user_based':True})
     algo.fit(trainset)
     return algo
 
-
 def build_content_model(df_cars):
-    """
-    Создает матрицу признаков для автомобилей и вычисляет матрицу косинусных сходств.
-    Возвращает df_features (DataFrame с индексом car_id) и content_sim (np.ndarray).
-    """
-    df = df_cars.copy()
-    df.set_index('car_id', inplace=True)
+    df_feat = df_cars.set_index('car_id')
     features = ['model','drive_type','year','power_hp','seats']
-    df_feat = df[features]
-    df_feat = pd.get_dummies(df_feat, columns=['model','drive_type'], drop_first=False)
-    scaler = MinMaxScaler()
+    df_feat = pd.get_dummies(df_feat[features], columns=['model','drive_type'], drop_first=False)
+    scaler  = MinMaxScaler()
     df_feat[['year','power_hp','seats']] = scaler.fit_transform(df_feat[['year','power_hp','seats']])
-    X = df_feat.values
-    content_sim = cosine_similarity(X, X)
-    return df_feat, content_sim
+    X       = df_feat.values
+    sim     = cosine_similarity(X, X)
+    return df_feat, sim
 
-
+# История пользователей
 def build_user_history(df_train):
-    """
-    Строит словарь: user_id -> список car_id из train.
-    """
     return df_train.groupby('user_id')['car_id'].apply(list).to_dict()
 
 
-def recommend_content(user_id, df_feat, content_sim, user_history, top_n=TOP_K):
+# Рекомендательные функции
+def recommend_content(user_id, df_feat, sim, history, top_n=TOP_K):
     cars = df_feat.index.tolist()
-    watched = user_history.get(user_id, [])
-    if not watched:
+    seen = history.get(user_id, [])
+    if not seen:
         return []
-    indices = [cars.index(cid) for cid in watched if cid in cars]
-    sim_scores = content_sim[:, indices]
-    mean_sim = sim_scores.mean(axis=1)
-    candidates = [(cars[i], mean_sim[i]) for i in range(len(cars)) if cars[i] not in watched]
+    idxs = [cars.index(c) for c in seen if c in cars]
+    scores = sim[:, idxs].mean(axis=1)
+    candidates = [(cars[i], scores[i]) for i in range(len(cars)) if cars[i] not in seen]
     candidates.sort(key=lambda x: x[1], reverse=True)
     return candidates[:top_n]
 
-
-def recommend_hybrid(user_id, cf_algo, df_feat, content_sim, user_history,
+def recommend_hybrid(user_id, cf_algo, df_feat, sim, history,
                      item_mean, popular, alpha=ALPHA, top_n=TOP_K):
     cars = df_feat.index.tolist()
-    watched = set(user_history.get(user_id, []))
-    cf_scores = {}
-    for cid in cars:
-        if cid in watched: continue
-        try:
-            cf_scores[cid] = cf_algo.predict(user_id, cid).est
-        except:
-            cf_scores[cid] = 0
+    seen = set(history.get(user_id, []))
+
+    cf_scores = {c: (cf_algo.predict(user_id, c).est if c not in seen else 0)
+                 for c in cars}
+    # content-based
     cb_scores = {}
-    if watched:
-        idxs = [cars.index(cid) for cid in watched if cid in cars]
-        sim_scores = content_sim[:, idxs] if idxs else np.zeros_like(content_sim)
-        mean_sim = sim_scores.mean(axis=1)
-        for i, cid in enumerate(cars):
-            if cid in watched: continue
-            cb_scores[cid] = mean_sim[i] * 5
+    if seen:
+        idxs = [cars.index(c) for c in seen if c in cars]
+        base = sim[:, idxs].mean(axis=1) if idxs else np.zeros(len(cars))
+        for i,c in enumerate(cars):
+            if c not in seen:
+                cb_scores[c] = base[i] * 5
     else:
         return popular[:top_n]
-    hybrid = {}
-    for cid in cf_scores:
-        hybrid[cid] = alpha * cf_scores.get(cid,0) + (1-alpha)*cb_scores.get(cid,0)
+
+    # hybrid
+    hybrid = {c: alpha*cf_scores.get(c,0) + (1-alpha)*cb_scores.get(c,0)
+              for c in cf_scores if c not in seen}
     ranked = sorted(hybrid.items(), key=lambda x: x[1], reverse=True)
     return ranked[:top_n]
 
-
-def evaluate(recommend_func, df_test, user_history, name, top_n=TOP_K):
+# Оценка качества
+def evaluate(rec_func, df_test, history, name, top_n=TOP_K):
     relevant = defaultdict(set)
-    for _, r in df_test.iterrows():
+    for _,r in df_test.iterrows():
         relevant[r['user_id']].add(r['car_id'])
-    precisions, recalls, aps = [],[],[]
+
+    ps, rs, aps = [],[],[]
     for uid, trues in relevant.items():
-        recs = [cid for cid,score in recommend_func(uid)]
+        recs = [c for c,_ in rec_func(uid)]
         if not recs: continue
-        hits = sum(1 for cid in recs if cid in trues)
-        precisions.append(hits/top_n)
-        recalls.append(hits/len(trues))
-        cum,ap = 0,0
-        for i,cid in enumerate(recs,1):
-            if cid in trues:
+        hits = sum(1 for c in recs if c in trues)
+        ps.append(hits/top_n)
+        rs.append(hits/len(trues))
+        cum, ap = 0,0
+        for i,c in enumerate(recs,1):
+            if c in trues:
                 cum += 1
                 ap += cum/i
         aps.append(ap/len(trues))
-    print(f"{name}: P@{top_n}={np.mean(precisions):.3f}, "
-          f"R@{top_n}={np.mean(recalls):.3f}, MAP@{top_n}={np.mean(aps):.3f}")
 
+    print(f"{name}: P@{top_n}={np.mean(ps):.3f}, "
+          f"R@{top_n}={np.mean(rs):.3f}, MAP@{top_n}={np.mean(aps):.3f}")
 
+# main
 def main():
     df_orders, df_reviews, df_cars = load_data()
-    df_int = prepare_interactions(df_orders, df_reviews)
+    df_int    = prepare_interactions(df_orders, df_reviews)
     df_train, df_test = train_test_split(df_int)
 
     cf_algo = build_cf_model(df_train)
-    df_feat, content_sim = build_content_model(df_cars)
-    user_hist = build_user_history(df_train)
+    feat, sim = build_content_model(df_cars)
+    history = build_user_history(df_train)
 
     item_mean = df_train.groupby('car_id')['rating'].mean().to_dict()
-    popular = sorted(item_mean.items(), key=lambda x: x[1], reverse=True)
+    popular   = sorted(item_mean.items(), key=lambda x: x[1], reverse=True)
 
-    evaluate(lambda u: recommend_hybrid(u, cf_algo, df_feat, content_sim, user_hist, item_mean, popular),
-             df_test, user_hist, "Hybrid")
-    evaluate(lambda u: recommend_content(u, df_feat, content_sim, user_hist),
-             df_test, user_hist, "Content-based")
-    evaluate(lambda u: recommend_hybrid(u, cf_algo, df_feat, content_sim, user_hist, item_mean, popular, alpha=1.0),
-             df_test, user_hist, "User-based CF")
+    evaluate(lambda u: recommend_hybrid(u, cf_algo, feat, sim, history, item_mean, popular),
+             df_test, history, "Hybrid")
+    evaluate(lambda u: recommend_content(u, feat, sim, history),
+             df_test, history, "Content-based")
+    evaluate(lambda u: recommend_hybrid(u, cf_algo, feat, sim, history, item_mean, popular, alpha=1.0),
+             df_test, history, "User-based CF")
 
-    with open(USER_CF_MODEL_FILE, 'wb') as f:
-        pickle.dump(cf_algo, f)
-    content_data = {'features': df_feat, 'cars': df_feat.index.tolist()}
-    with open(CONTENT_MODEL_FILE, 'wb') as f:
-        pickle.dump(content_data, f)
-    hybrid_data = {'cf': cf_algo, 'features': df_feat, 'sim': content_sim,
-                   'alpha': ALPHA, 'popular': popular}
-    with open(HYBRID_MODEL_FILE, 'wb') as f:
-        pickle.dump(hybrid_data, f)
+    # сохраняем
+    with open(USER_CF_MODEL_FILE, 'wb')    as f: pickle.dump(cf_algo, f)
+    with open(CONTENT_MODEL_FILE, 'wb')    as f: pickle.dump({'features': feat, 'cars': feat.index.tolist()}, f)
+    with open(HYBRID_MODEL_FILE, 'wb')     as f: pickle.dump({'cf': cf_algo,'features':feat,'sim':sim,'alpha':ALPHA,'popular':popular}, f)
 
     print("Models saved.")
 
 if __name__ == '__main__':
     main()
-```
 
 ### `backend\Recommendations.ipynb`
 
