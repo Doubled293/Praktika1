@@ -985,11 +985,11 @@ def admin_update_user(user_id_to_update):
             app.logger.info(f"Admin updated password for user ID: {user_id_to_update}")
         if 'role' in data:
             new_role_name = data['role']
-            current_admin_id = get_current_user_id_from_jwt()
+            current_admin_id = get_current_user_id()
             if user.id == current_admin_id and user.role.name == 'admin' and new_role_name != 'admin':
                 admin_count = User.query.join(Role).filter(Role.name == 'admin').count()
                 if admin_count <= 1: return jsonify({'error': 'Cannot remove admin role from the last administrator.'}), 403
-            role_obj = Role.query.filter_by(name=new_role_name).first() # Renamed to avoid conflict
+            role_obj = Role.query.filter_by(name=new_role_name).first()
             if not role_obj: return jsonify({'error': f'Role "{new_role_name}" not found'}), 400
             user.role_id = role_obj.id
         db.session.commit()
