@@ -1209,31 +1209,27 @@ def admin_remove_vehicle(vehicle_id):
     try:
         vehicle = Vehicle.query.get_or_404(vehicle_id)
 
+        # Порядок удаления связанных объектов
         Review.query.filter_by(vehicle_id=vehicle_id).delete(synchronize_session=False)
-
+        CartItem.query.filter_by(vehicle_id=vehicle_id).delete(synchronize_session=False)
         OrderItem.query.filter_by(vehicle_id=vehicle_id).delete(synchronize_session=False)
 
-        orphan_orders = (
-            Order.query
-                 .outerjoin(OrderItem, Order.id == OrderItem.order_id)
-                 .filter(OrderItem.id == None)
-                 .all()
-        )
-        for o in orphan_orders:
-            db.session.delete(o)
-
-        CartItem.query.filter_by(vehicle_id=vehicle_id).delete(synchronize_session=False)
-
+        orphan_orders_cleaned_count = 0
+        orders_with_this_vehicle_item = Order.query.join(OrderItem).filter(OrderItem.vehicle_id == vehicle_id).distinct(Order.id).all()
+        for o in orders_with_this_vehicle_item:
+            if not o.items:
+                db.session.delete(o)
+                orphan_orders_cleaned_count +=1
+        
         db.session.delete(vehicle)
         db.session.commit()
 
-        app.logger.info(f"Admin deleted vehicle {vehicle_id}: "
-                        f"{len(orphan_orders)} orphan orders cleaned.")
+        app.logger.info(f"Admin deleted vehicle {vehicle_id}. {orphan_orders_cleaned_count} orphan orders (if any) also cleaned.")
         return jsonify({'message': f'Vehicle {vehicle_id} deleted successfully.'}), 200
 
     except HTTPException as he:
+        db.session.rollback()
         return jsonify({'error': he.description}), he.code
-
     except Exception as e:
         db.session.rollback()
         app.logger.error(f"Error deleting vehicle {vehicle_id}: {e}", exc_info=True)
@@ -1241,7 +1237,7 @@ def admin_remove_vehicle(vehicle_id):
 
 
 if __name__ == '__main__':
-    app.logger.info("Starting Flask development server...")
+    app.logger.info("Starting Flask server on 0.0.0.0:5000")
     app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
 ```
 
