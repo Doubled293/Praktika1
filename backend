@@ -520,7 +520,7 @@ def checkout():
 @app.route('/api/history', methods=['GET'])
 @jwt_required()
 def get_history():
-    try: user_id = get_current_user_id_from_jwt()
+    try: user_id = get_current_user_id()
     except ValueError as e: return jsonify(msg=str(e), error_code="INVALID_USER_ID"), 400
     orders_q = Order.query.filter_by(user_id=user_id).order_by(Order.created_at.desc()).all()
     return jsonify([{'order_id': o.id, 'created_at': o.created_at.isoformat(),
