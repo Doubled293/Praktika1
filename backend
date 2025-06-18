@@ -1064,7 +1064,7 @@ def admin_add_new_vehicle():
 
     vid = data.get('vehicle_id')
     if not vid or not isinstance(vid, str) or not vid.strip():
-        return jsonify(error="Field 'vehicle_id' (UUID) is required."), 400
+        return jsonify(error="Field 'vehicle_id' (UUID string) is required."), 400
     vid = vid.strip()
     if Vehicle.query.get(vid):
         return jsonify(error=f"Vehicle with ID '{vid}' already exists."), 409
@@ -1084,6 +1084,7 @@ def admin_add_new_vehicle():
         seats       = int(data['seats'])
         price       = Decimal(str(data['price_per_day_usd']))
         image_url   = str(data.get('image_url','')).strip() or None
+        model_val   = str(data.get('model','')).strip() or None
 
         if not brand:     return jsonify(error="Brand cannot be empty."), 400
         if not body_type: return jsonify(error="Body type cannot be empty."), 400
@@ -1102,7 +1103,7 @@ def admin_add_new_vehicle():
         new_v = Vehicle(
             vehicle_id=vid,
             brand=brand,
-            model=str(data.get('model','')).strip() or None,
+            model=model_val,
             body_type=body_type,
             year=year,
             gearbox=gearbox,
@@ -1133,11 +1134,9 @@ def admin_add_new_vehicle():
     except ValueError as ve:
         db.session.rollback()
         app.logger.warning(f"ValueError in admin_add_new_vehicle: {ve}. Payload: {data}")
-        return jsonify(error=f"Invalid data type: {ve}"), 400
-
+        return jsonify(error=f"Invalid data type for a field: {ve}"), 400
     except HTTPException as he:
-        return jsonify(error=str(he)), he.code
-
+        return jsonify(error=str(he)), he.code 
     except Exception as e:
         db.session.rollback()
         app.logger.error(f"Unexpected error in admin_add_new_vehicle: {e}", exc_info=True)
