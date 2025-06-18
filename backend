@@ -532,7 +532,7 @@ def get_history():
 @app.route('/api/reviews', methods=['GET'])
 @jwt_required()
 def list_my_reviews():
-    try: user_id = get_current_user_id_from_jwt()
+    try: user_id = get_current_user_id()
     except ValueError as e: return jsonify(msg=str(e), error_code="INVALID_USER_ID"), 400
     revs_q = db.session.query(Review, Vehicle.brand, Vehicle.model, Vehicle.image_url)\
         .join(Vehicle, Review.vehicle_id == Vehicle.vehicle_id)\
