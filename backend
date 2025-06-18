@@ -674,16 +674,16 @@ def delete_review(rid):
     return '', 204
 
 
-@app.route('/api/recommendations', methods=['GET']) 
-@jwt_required(optional=True) 
+@app.route('/api/recommendations', methods=['GET'])
+@jwt_required(optional=True)
 def get_general_recommendations():
     user_id = None
     try:
-        if get_jwt_identity(): user_id = get_current_user_id_from_jwt()
+        if get_jwt_identity(): user_id = get_current_user_id()
     except Exception: user_id = None
     recent_vids_str = set()
-    MIN_ITEMS_FOR_SIMILARITY = 1 
-    MAX_SOURCE_ITEMS = 3 
+    MIN_ITEMS_FOR_SIMILARITY = 1
+    MAX_SOURCE_ITEMS = 3
     if user_id:
         orders = Order.query.filter_by(user_id=user_id).order_by(Order.created_at.desc()).limit(MAX_SOURCE_ITEMS).all()
         for o in orders:
