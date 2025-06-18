@@ -133,15 +133,23 @@ with app.app_context():
     app.logger.info("Application context entered for DB setup.")
     db.create_all()
     app.logger.info("db.create_all() called (creates tables if they don't exist).")
+
+    user_role_created = False
+    admin_role_created = False
     if not Role.query.filter_by(name='user').first():
         app.logger.info("Default 'user' role not found, creating it.")
         db.session.add(Role(name='user'))
+        user_role_created = True
     if not Role.query.filter_by(name='admin').first():
         app.logger.info("Default 'admin' role not found, creating it.")
         db.session.add(Role(name='admin'))
+        admin_role_created = True
+
     if db.session.new:
         db.session.commit()
         app.logger.info("Default roles committed if they were created.")
+    else:
+        app.logger.info("Default roles already existed or no new roles were added.")
     if not Vehicle.query.first():
         app.logger.info("No vehicles found in DB, attempting to load from CSV.")
         csv_path = os.path.join(os.path.dirname(__file__), 'data', 'project_vehicle_dataset.csv')
