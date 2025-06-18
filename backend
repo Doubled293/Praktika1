@@ -665,7 +665,7 @@ def update_review(rid):
 @app.route('/api/reviews/<int:rid>', methods=['DELETE'])
 @jwt_required()
 def delete_review(rid):
-    try: user_id = get_current_user_id_from_jwt()
+    try: user_id = get_current_user_id()
     except ValueError as e: return jsonify(msg=str(e), error_code="INVALID_USER_ID"), 400
     r = db.session.get(Review, rid)
     if not r or r.user_id != user_id: return jsonify({'error': 'Review not found or not owned'}), 404
