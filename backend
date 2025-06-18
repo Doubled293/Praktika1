@@ -2509,8 +2509,371 @@ if valid_metric_indices:
         fig.tight_layout(); plt.show() 
     else: print("Нет валидных данных для построения итогового графика.")
 else: print("Нет данных для построения итогового графика (все метрики NaN).")
-
 ```
 
+```
+### `backend\recommender.py`
 
+```python
+import os
+import json
+import logging
+
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+logging.getLogger('tensorflow').setLevel(logging.ERROR)
+
+
+from tensorflow.keras import layers, regularizers, optimizers
+from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping
+from sklearn.model_selection import train_test_split
+from sklearn.utils.class_weight import compute_class_weight
+from sqlalchemy import create_engine
+
+DB_URL = os.environ.get(
+    'DATABASE_URL',
+    'mysql+pymysql://root:PisyaMorja123@localhost/db_name'
+)
+
+def load_and_split_ratings_with_features(test_size=0.2, random_state=42):
+    engine = create_engine(DB_URL)
+    try:
+        df = pd.read_sql("SELECT user_id, vehicle_id, rating FROM reviews;", engine)
+    except Exception as e:
+        print(f"Ошибка подключения к базе данных или получения данных: {e}")
+        return None, None, None, None
+
+    if df.empty:
+        print("Данные из базы данных не получены.")
+        return None, None, None, None
+
+    df['user_id']    = df['user_id'].astype(str)
+    df['vehicle_id'] = df['vehicle_id'].astype(str)
+    df['rating']     = df['rating'].astype(int)
+
+    counts = df['rating'].value_counts()
+    min_samples_for_stratify = 2
+    unique_ratings_in_df = df['rating'].unique()
+    can_stratify = all(counts.get(r, 0) >= min_samples_for_stratify for r in unique_ratings_in_df)
+    
+    strat = df['rating'] if can_stratify else None
+    if not can_stratify:
+        print(f"Предупреждение: Не все классы рейтинга в наборе данных имеют >= {min_samples_for_stratify} примеров. Стратификация может быть частичной или отключена.")
+
+    train_df, test_df = train_test_split(
+        df,
+        test_size=test_size,
+        random_state=random_state,
+        stratify=strat
+    )
+
+    if train_df.empty or test_df.empty:
+        print(f"Тренировочных примеров: {len(train_df)}, Тестовых примеров: {len(test_df)}")
+        print("Недостаточно данных для обучения/тестирования после разделения. Выход.")
+        return None, None, None, None
+
+    global_average_rating = train_df['rating'].mean()
+    if pd.isna(global_average_rating): 
+        global_average_rating = 3.0 
+
+    user_agg = train_df.groupby('user_id')['rating'].agg(['mean', 'count']).reset_index()
+    user_agg.columns = ['user_id', 'user_avg_rating', 'user_rating_count']
+
+    item_agg = train_df.groupby('vehicle_id')['rating'].agg(['mean', 'count']).reset_index()
+    item_agg.columns = ['vehicle_id', 'item_avg_rating', 'item_rating_count']
+
+    train_df = pd.merge(train_df, user_agg, on='user_id', how='left')
+    train_df = pd.merge(train_df, item_agg, on='vehicle_id', how='left')
+
+    test_df = pd.merge(test_df, user_agg, on='user_id', how='left')
+    test_df = pd.merge(test_df, item_agg, on='vehicle_id', how='left')
+
+    feature_cols_avg = ['user_avg_rating', 'item_avg_rating']
+    for col in feature_cols_avg:
+        train_df[col] = train_df[col].fillna(global_average_rating)
+        test_df[col] = test_df[col].fillna(global_average_rating)
+
+    feature_cols_count = ['user_rating_count', 'item_rating_count']
+    for col in feature_cols_count:
+        train_df[col] = train_df[col].fillna(0)
+        test_df[col] = test_df[col].fillna(0)
+        
+    numerical_feature_names = feature_cols_avg + feature_cols_count
+    
+    norm_layer_stats = {}
+    for feature_name in numerical_feature_names:
+        mean = train_df[feature_name].mean()
+        variance = train_df[feature_name].var()
+        if pd.isna(mean): mean = 0.0 
+        if pd.isna(variance) or variance == 0:
+            variance = 1e-6 
+        norm_layer_stats[feature_name] = {'mean': mean, 'variance': variance}
+
+    return train_df, test_df, norm_layer_stats, global_average_rating
+
+
+class RatingClassificationModel(tf.keras.Model):
+    def __init__(self, user_lookup, item_lookup, norm_layers,
+                 embedding_dim=64,      
+                 hidden_units=[128, 64], 
+                 dropout_rate=0.5,       
+                 l2_reg=2e-4,            
+                 num_classes=5):
+        super().__init__()
+        self.user_lookup = user_lookup
+        self.item_lookup = item_lookup
+        self.norm_layers = norm_layers 
+        self.embedding_dim_param = embedding_dim
+        self.hidden_units_param = hidden_units
+        self.dropout_rate_param = dropout_rate
+        self.l2_reg_param = l2_reg
+        self.num_classes_param = num_classes
+
+        vocab_u = user_lookup.vocabulary_size()
+        vocab_i = item_lookup.vocabulary_size()
+
+        self.user_emb = layers.Embedding(
+            vocab_u,
+            self.embedding_dim_param,
+            embeddings_regularizer=regularizers.l2(self.l2_reg_param),
+            name="user_embedding"
+        )
+        self.item_emb = layers.Embedding(
+            vocab_i,
+            self.embedding_dim_param,
+            embeddings_regularizer=regularizers.l2(self.l2_reg_param),
+            name="item_embedding"
+        )
+
+        self.concat = layers.Concatenate(name="concat_embeddings_features")
+        
+        self.dense_layers_list = []
+        if self.hidden_units_param:
+            self.dense_layers_list.append(layers.Dropout(self.dropout_rate_param, name="initial_dropout"))
+        
+        for i, units in enumerate(self.hidden_units_param):
+            self.dense_layers_list.append(layers.Dense(
+                units,
+                kernel_regularizer=regularizers.l2(self.l2_reg_param),
+                name=f"dense_{units}_{i}"
+            ))
+            self.dense_layers_list.append(layers.BatchNormalization(name=f"bn_{units}_{i}"))
+            self.dense_layers_list.append(layers.Activation('relu', name=f"relu_{units}_{i}"))
+            self.dense_layers_list.append(layers.Dropout(self.dropout_rate_param, name=f"dropout_{units}_{i}"))
+        
+        if not self.hidden_units_param :
+             self.dense_layers_list.append(layers.Dropout(self.dropout_rate_param, name="concat_dropout_no_hidden"))
+
+        self.out = layers.Dense(self.num_classes_param, activation='softmax', name="output")
+
+    def call(self, inputs, training=False):
+        user_indices = self.user_lookup(inputs['user_id'])
+        item_indices = self.item_lookup(inputs['item_id'])
+
+        user_embedding = self.user_emb(user_indices)
+        item_embedding = self.item_emb(item_indices)
+
+        norm_features_list = []
+        for name, norm_layer_obj in self.norm_layers.items(): 
+            feature_input_orig = inputs[name]
+            
+            condition = tf.equal(tf.rank(feature_input_orig), 1)
+            
+            def expand_dim_fn(inp):
+                return tf.expand_dims(inp, axis=-1)
+            
+            def no_change_fn(inp):
+                return inp
+
+            feature_input_processed = tf.cond(
+                condition,
+                lambda: expand_dim_fn(feature_input_orig), 
+                lambda: no_change_fn(feature_input_orig)  
+            )
+            norm_features_list.append(norm_layer_obj(feature_input_processed))
+        
+        concat_inputs = [user_embedding, item_embedding] + norm_features_list
+        x = self.concat(concat_inputs)
+
+        for layer_obj in self.dense_layers_list:
+            if isinstance(layer_obj, (layers.Dropout, layers.BatchNormalization)):
+                x = layer_obj(x, training=training)
+            else:
+                x = layer_obj(x)
+        
+        return self.out(x)
+    
+    def get_config_params(self):
+        return {
+            'embedding_dim': self.embedding_dim_param,
+            'hidden_units': self.hidden_units_param,
+            'dropout_rate': self.dropout_rate_param,
+            'l2_reg': self.l2_reg_param,
+            'num_classes': self.num_classes_param
+        }
+
+def train_and_save(epochs=150, batch_size=128):
+    train_df, test_df, norm_layer_stats, global_avg_rating = load_and_split_ratings_with_features()
+    
+    if train_df is None or test_df is None:
+        print("Не удалось загрузить данные с признаками. Выход.")
+        return
+    
+    numerical_feature_names = ['user_avg_rating', 'user_rating_count', 'item_avg_rating', 'item_rating_count']
+
+    all_users = sorted(pd.concat([train_df.user_id, test_df.user_id]).unique().tolist())
+    all_items = sorted(pd.concat([train_df.vehicle_id, test_df.vehicle_id]).unique().tolist())
+
+    user_lookup = layers.StringLookup(vocabulary=all_users, mask_token=None, name="user_id_lookup")
+    item_lookup = layers.StringLookup(vocabulary=all_items, mask_token=None, name="vehicle_id_lookup")
+
+    norm_layers = {}
+    for feature_name in numerical_feature_names:
+        norm_layer_obj = layers.Normalization(axis=-1, name=f"norm_{feature_name}") 
+        feature_data = train_df[feature_name].values.astype(np.float32).reshape(-1, 1)
+        if len(feature_data) > 0:
+            norm_layer_obj.adapt(feature_data)
+        else:
+            print(f"Предупреждение: Нет данных для адаптации слоя нормализации для {feature_name}. Используются веса по умолчанию (среднее=0, дисперсия=1).")
+            norm_layer_obj.set_weights([np.array([0.0]), np.array([1.0])]) 
+        norm_layers[feature_name] = norm_layer_obj
+
+    classes_original_ratings = np.arange(1, 6)
+    y_train_original = train_df['rating'].to_numpy()
+    class_weights_dict = None
+    if len(y_train_original) > 0:
+        y_train_for_weighting = y_train_original[np.isin(y_train_original, classes_original_ratings)]
+        if len(y_train_for_weighting) > 0:
+            present_classes_in_train = np.unique(y_train_for_weighting)
+            if len(present_classes_in_train) > 0 :
+                sorted_present_classes = np.sort(present_classes_in_train)
+                cw = compute_class_weight('balanced', 
+                                          classes=sorted_present_classes, 
+                                          y=y_train_for_weighting)
+                class_weights_dict = {label - 1: weight for label, weight in zip(sorted_present_classes, cw)}
+                print(f"Рассчитанные веса классов (для индексов 0-4): {class_weights_dict}")
+            else: print("Предупреждение: В y_train не найдены допустимые классы (1-5) для расчета весов классов.")
+        else: print("Предупреждение: y_train_original (после фильтрации по 1-5) пуст. Веса классов не рассчитаны.")
+    else: print("Предупреждение: y_train_original пуст. Веса классов не рассчитаны.")
+
+    num_classes_param = 5 
+
+    def df_to_dataset(df, shuffle):
+        x_dict = {
+            'user_id': df['user_id'].to_numpy(),
+            'item_id': df['vehicle_id'].to_numpy(),
+        }
+        for fname in numerical_feature_names: 
+            x_dict[fname] = df[fname].to_numpy().astype(np.float32)
+
+        if df['rating'].empty:
+            raise ValueError("DataFrame для рейтингов пуст в df_to_dataset.")
+        y = tf.one_hot(df['rating'] - 1, depth=num_classes_param) 
+        ds = tf.data.Dataset.from_tensor_slices((x_dict, y))
+        if shuffle:
+            ds = ds.shuffle(buffer_size=len(df))
+        return ds.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+
+    try:
+        train_ds = df_to_dataset(train_df, shuffle=True)
+        val_ds   = df_to_dataset(test_df, shuffle=False)
+    except ValueError as e:
+        print(f"Ошибка при создании датасета: {e}")
+        return
+
+    embedding_dim_param = 64     
+    hidden_units_param = [128, 64] 
+    dropout_rate_param = 0.5     
+    l2_reg_param = 2e-4
+
+    model = RatingClassificationModel(
+        user_lookup, item_lookup, norm_layers,
+        embedding_dim=embedding_dim_param,
+        hidden_units=hidden_units_param,
+        dropout_rate=dropout_rate_param,
+        l2_reg=l2_reg_param,
+        num_classes=num_classes_param
+    )
+    
+    try:
+        sample_x_batch, _ = next(iter(train_ds)) 
+        _ = model(sample_x_batch, training=False) 
+        print("Модель успешно построена с использованием тестового батча.")
+    except Exception as e:
+        print(f"Ошибка во время начального вызова модели (построения): {e}")
+        import traceback
+        traceback.print_exc()
+        return
+
+    # Гиперпараметры оптимизатора и коллбэков
+    optimizer = optimizers.AdamW(
+        learning_rate=3e-4,   
+        weight_decay=2e-4,    
+        clipnorm=1.0          
+    )
+
+    model.compile(
+        optimizer=optimizer,
+        loss='categorical_crossentropy',
+        metrics=['accuracy']
+    )
+
+    reduce_lr = ReduceLROnPlateau(
+        monitor='val_loss',
+        factor=0.3, 
+        patience=7, 
+        min_lr=1e-7, 
+        verbose=1 
+    )
+    early_stopping = EarlyStopping(
+        monitor='val_loss',
+        patience=20,    
+        min_delta=0.001, 
+        restore_best_weights=True,
+        verbose=1 
+    )
+
+    print("Начало обучения модели (v10_baseline_moderate_reg)...")
+    history = model.fit(
+        train_ds,
+        validation_data=val_ds,
+        epochs=epochs, 
+        class_weight=class_weights_dict if class_weights_dict else None,
+        callbacks=[reduce_lr, early_stopping],
+        verbose=1 
+    )
+    print("Обучение завершено.")
+
+    loss, acc = model.evaluate(val_ds, verbose=0)
+    print(f"=== Итоговая точность на тестовом наборе: {acc:.4f} ===")
+    print(f"=== Итоговые потери на тестовом наборе: {loss:.4f} ===")
+
+    save_dir = os.path.join(os.getcwd(), 'saved_rating_model_cls_v10_baseline_moderate_reg') 
+    os.makedirs(save_dir, exist_ok=True)
+    
+    model.save_weights(os.path.join(save_dir, 'model.weights.h5'))
+
+    with open(os.path.join(save_dir, 'user_lookup_vocab.json'), 'w', encoding='utf-8') as f:
+        json.dump(user_lookup.get_vocabulary(), f, ensure_ascii=False)
+    with open(os.path.join(save_dir, 'item_lookup_vocab.json'), 'w', encoding='utf-8') as f:
+        json.dump(item_lookup.get_vocabulary(), f, ensure_ascii=False)
+
+    model_actual_config_params = model.get_config_params()
+    with open(os.path.join(save_dir, 'model_config_params.json'), 'w', encoding='utf-8') as f:
+        json.dump(model_actual_config_params, f, ensure_ascii=False)
+
+    with open(os.path.join(save_dir, 'norm_layer_stats.json'), 'w', encoding='utf-8') as f:
+        json.dump(norm_layer_stats, f, ensure_ascii=False)
+        
+    with open(os.path.join(save_dir, 'global_average_rating.json'), 'w', encoding='utf-8') as f:
+        json.dump({'global_average_rating': global_avg_rating}, f, ensure_ascii=False)
+
+    print(f"Модель и артефакты сохранены в {save_dir}")
+
+if __name__ == '__main__':
+    train_and_save()
+```
 
