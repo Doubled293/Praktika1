@@ -231,7 +231,7 @@ def admin_required(fn):
         return fn(*args, **kwargs)
     return wrapper
 
-# Функции прогнозирования
+# Функции прогнозирования (пользователя)
 def predict_user_cf_revised(user_id, vehicle_id_to_predict_str, current_user_actual_history=None):
     user_specific_mean = user_means.get(user_id, global_mean) if user_means is not None else global_mean
     if user_knn is None or train_centered_idx is None or user_id not in train_centered_idx or train_centered_cols is None:
@@ -324,6 +324,48 @@ def predict_content_cf_revised(user_id, vehicle_id_to_predict_str, current_user_
         return user_specific_mean
     predicted_rating = np.mean(user_ratings_for_similar_items)
     return np.clip(predicted_rating, MIN_RATING, MAX_RATING)
+
+# эндпоинт объекта
+@app.route('/api/tf-recs/<string:uid>', methods=['GET'])
+@jwt_required(optional=True)
+def tf_recs(uid):
+    if not user_lookup or not user_model or item_embeddings_norm is None or not tf_item_ids:
+        app.logger.error(f"TF components not available for tf-recs for user {uid}. Aborting.")
+        return jsonify([])
+    try:
+        idx = user_lookup(tf.constant([str(uid)])).numpy()[0]
+        emb = user_model.predict(np.array([idx]))[0]
+        emb = emb / (np.linalg.norm(emb)+1e-10)
+        scores = item_embeddings_norm.dot(emb)
+        k=10
+        topk = np.argpartition(-scores, k)[:k]
+        topk = topk[np.argsort(-scores[topk])]
+        rec_ids = [tf_item_ids[i] for i in topk]
+    except Exception as e:
+        app.logger.error(f"tf-recs failed for {uid}: {e}", exc_info=True)
+        return jsonify([])
+
+    # загрузка данных об автомобиле
+    vehicles = Vehicle.query.filter(Vehicle.vehicle_id.in_(rec_ids)).all()
+    vmap = {v.vehicle_id:v for v in vehicles}
+    out = []
+    for vid in rec_ids:
+        v = vmap.get(vid)
+        if not v: continue
+        out.append({
+            'vehicle_id': v.vehicle_id,
+            'brand':       v.brand,
+            'model':       v.model,
+            'body_type':   v.body_type,
+            'year':        v.year,
+            'gearbox':     v.gearbox,
+            'drive':       v.drive,
+            'power_hp':    v.power_hp,
+            'seats':       v.seats,
+            'price_per_day_usd': float(v.price_per_day_usd),
+            'image_url':   v.image_url
+        })
+    return jsonify(out)
 
 @app.route('/api/auth/register', methods=['POST'])
 def register():
