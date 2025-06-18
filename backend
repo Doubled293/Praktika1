@@ -611,7 +611,7 @@ def add_review():
 @jwt_required()
 def update_review(rid):
     try:
-        user_id = get_current_user_id_from_jwt()
+        user_id = get_current_user_id()
     except ValueError as e:
         app.logger.error(f"UpdateReview: Invalid user ID in token: {e}")
         return jsonify(msg=str(e), error_code="INVALID_USER_ID"), 400
