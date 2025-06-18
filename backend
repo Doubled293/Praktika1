@@ -1,50 +1,79 @@
 ### `backend\app.py`
 
 ```python
+import os
+import json
+import csv
+import logging
+from decimal import Decimal
+from datetime import datetime
+from functools import wraps
+
+import numpy as np
+import pandas as pd
+import joblib
+import tensorflow as tf 
+from tensorflow.keras.models import load_model 
+
 from flask import Flask, jsonify, request
-from flask_cors import CORS
-from flask import jsonify
-from flask_cors import cross_origin
-from werkzeug.exceptions import HTTPException
+from flask_cors import CORS, cross_origin
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import (
     JWTManager, create_access_token,
     jwt_required, get_jwt_identity, get_jwt
 )
-from decimal import Decimal
-from models import User, Role, Review, Order, OrderItem
+from werkzeug.exceptions import HTTPException
+from sqlalchemy import or_, func
+
 from database import db
-from sqlalchemy import or_
-from sqlalchemy.sql import func
-import os
-import csv
-import logging
-import joblib
-import pandas as pd
-import numpy as np
-from functools import wraps
-from datetime import datetime
+from models import Role, User, Vehicle, CartItem, Order, OrderItem, Review
+
+
+app = Flask(__name__)
+CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}}, supports_credentials=True)
+
+app.logger.setLevel(logging.DEBUG)
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+app.logger.handlers = [handler] 
+
+app.logger.info("Flask application logger configured.")
+
+# config
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+    'DATABASE_URL',
+    'mysql+pymysql://root:PisyaMorja123@localhost/db_name'
+)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['JWT_SECRET_KEY'] = os.environ.get(
+    'JWT_SECRET_KEY',
+    'your-super-secret-fallback-key-for-admin-panel'
+)
+
+db.init_app(app)
+bcrypt = Bcrypt(app)
+jwt = JWTManager(app)
 
 ARTIFACTS_PATH = os.path.join(os.path.dirname(__file__), 'models', 'recommendation_artifacts_csv.joblib')
-if not os.path.exists(ARTIFACTS_PATH):
-    print(f"CRITICAL: Artifacts file not found at {ARTIFACTS_PATH}. Recommendation system will not work.")
-    art = {}
-else:
+if os.path.exists(ARTIFACTS_PATH):
     try:
         art = joblib.load(ARTIFACTS_PATH)
-        print(f"Artifacts loaded successfully from {ARTIFACTS_PATH}")
+        app.logger.info(f"Loaded CF artifacts from {ARTIFACTS_PATH}")
     except Exception as e:
-        print(f"CRITICAL: Failed to load artifacts from {ARTIFACTS_PATH}: {e}. Recommendation system will not work.")
+        app.logger.error(f"Failed loading CF artifacts: {e}", exc_info=True)
         art = {}
+else:
+    app.logger.error(f"CF artifacts not found at {ARTIFACTS_PATH}")
+    art = {}
 
 user_knn = art.get('user_knn')
 item_knn = art.get('item_knn')
 item_pipeline = art.get('item_pipeline')
 train_centered_idx = art.get('train_centered_index')
 train_centered_cols = art.get('train_centered_columns')
-user_means = art.get('user_means')
+user_means = art.get('user_means', {})
 user_history = art.get('user_rated_history', {})
-X_items_index = art.get('X_items_df_index')
+X_items_index = art.get('X_items_df_index', [])
 X_items_used_cat_features = art.get('X_items_df_used_cat_features', [])
 X_items_used_num_features = art.get('X_items_df_used_num_features', [])
 X_ITEMS_PIPELINE_COLS = X_items_used_cat_features + X_items_used_num_features
@@ -54,38 +83,50 @@ MIN_RATING = art.get('MIN_RATING', 1.0)
 MAX_RATING = art.get('MAX_RATING', 5.0)
 best_alpha = art.get('best_alpha_hybrid', 0.5)
 
-from database import db
-from models import Role, User, Vehicle, CartItem, Order, OrderItem, Review
-
-app = Flask(__name__)
+app.logger.info(f"Type of user_knn after loading: {type(user_knn)}")
 
 
-# Конфигурация CORS
-CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}}, supports_credentials=True)
+BASE_DIR        = os.path.dirname(os.path.abspath(__file__))
+MODELS_DIR      = os.path.join(BASE_DIR, 'models')
+SAVED_DIR       = os.path.join(BASE_DIR, 'saved_recommender')
 
-# Конфигурация логгера
-app.logger.setLevel(logging.DEBUG)
-for handler in app.logger.handlers[:]:
-    app.logger.removeHandler(handler)
-log_handler = logging.StreamHandler()
-log_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - [APP] - %(message)s')
-log_handler.setFormatter(log_formatter)
-app.logger.addHandler(log_handler)
-app.logger.propagate = False
-app.logger.info("Flask application logger configured.")
+tf_user_ids = []
+tf_item_ids = []
+item_embeddings_norm = None
+user_lookup = None
+user_model = None
 
-# Логирование статуса артефактов
-app_logger_for_artifacts = app.logger
-app_logger_for_artifacts.info(f"Type of user_knn: {type(user_knn)}")
+try:
+    with open(os.path.join(MODELS_DIR, 'user_ids.json'), 'r', encoding='utf-8') as f:
+        tf_user_ids = json.load(f)
+    with open(os.path.join(MODELS_DIR, 'item_ids.json'), 'r', encoding='utf-8') as f:
+        tf_item_ids = json.load(f)
 
-# Конфигурация приложения
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'mysql+pymysql://root:PisyaMorja123@localhost/db_name')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'your-super-secret-fallback-key-for-admin-panel')
+    item_embeddings_path = os.path.join(MODELS_DIR, 'item_embeddings.npy')
+    if os.path.exists(item_embeddings_path):
+        item_embeddings = np.load(item_embeddings_path)
+        _norms = np.linalg.norm(item_embeddings, axis=1, keepdims=True)
+        item_embeddings_norm = item_embeddings / (_norms + 1e-10)
+        app.logger.info("Loaded TF item embeddings.")
+    else:
+        app.logger.error(f"TF item_embeddings.npy not found at {item_embeddings_path}")
 
-db.init_app(app)
-bcrypt = Bcrypt(app)
-jwt = JWTManager(app)
+
+    if tf_user_ids:
+        user_lookup   = tf.keras.layers.StringLookup(vocabulary=tf_user_ids, mask_token=None)
+        user_model_path = os.path.join(SAVED_DIR, 'user_model.h5')
+        if os.path.exists(user_model_path):
+            user_model    = load_model(user_model_path, compile=False)
+            app.logger.info("Loaded TF user model and lookup.")
+        else:
+            app.logger.error(f"TF user_model.h5 not found at {user_model_path}")
+    else:
+        app.logger.error("TF user_ids not loaded, cannot initialize user_lookup and user_model.")
+
+except FileNotFoundError as fnf_error:
+    app.logger.error(f"TF Model loading error: File not found - {fnf_error}", exc_info=True)
+except Exception as e:
+    app.logger.error(f"General error loading TF Model components: {e}", exc_info=True)
 
 # Инициализация БД и загрузка данных
 with app.app_context():
