@@ -191,7 +191,47 @@ with app.app_context():
         else: app.logger.warning(f"Vehicles CSV file not found at {csv_path} during app startup.")
     else: app.logger.info("Vehicles already exist in the database, skipping CSV load during app startup.")
 
+# Обратные вызоы JWT
+@jwt.expired_token_loader
+def expired_token_callback(jwt_header, jwt_payload):
+    return jsonify(msg="Token has expired", error_code="TOKEN_EXPIRED"), 401
 
+@jwt.invalid_token_loader
+def invalid_token_callback(err_string): # param name from target (err) or user (error_string)
+    return jsonify(msg=f"Invalid Token: {err_string}", error_code="INVALID_TOKEN"), 422
+
+@jwt.unauthorized_loader
+def missing_token_callback(err_string): # param name from target (err) or user (error_string)
+    return jsonify(msg=f"Authorization Required: {err_string}", error_code="AUTH_REQUIRED"), 401 # user had AUTHORIZATION_REQUIRED
+
+@jwt.needs_fresh_token_loader
+def fresh_token_callback(jwt_header, jwt_data): # user had token_not_fresh_callback
+    return jsonify(msg="Fresh token required", error_code="FRESH_TOKEN_REQUIRED"), 401
+
+
+# Использование пользователя для улучшения обработки журнала
+def get_current_user_id():
+    jwt_user_id_str = get_jwt_identity()
+    try:
+        return int(jwt_user_id_str)
+    except (ValueError, TypeError):
+        app.logger.error(f"Invalid JWT identity: '{jwt_user_id_str}'. Cannot convert to int.")
+        raise ValueError(f"Invalid user identity in token: {jwt_user_id_str}")
+
+def admin_required(fn):
+    @wraps(fn)
+    @jwt_required()
+    def wrapper(*args, **kwargs):
+        current_user_claims = get_jwt()
+        user_role = current_user_claims.get('role')
+        if user_role != 'admin':
+            user_id_for_log = get_jwt_identity() 
+            app.logger.warning(f"Admin access denied for user ID: {user_id_for_log}. Role in token: '{user_role}'")
+            return jsonify(msg="Administration rights required."), 403 
+        return fn(*args, **kwargs)
+    return wrapper
+
+# Функции прогнозирования
 def predict_user_cf_revised(user_id, vehicle_id_to_predict_str, current_user_actual_history=None):
     user_specific_mean = user_means.get(user_id, global_mean) if user_means is not None else global_mean
     if user_knn is None or train_centered_idx is None or user_id not in train_centered_idx or train_centered_cols is None:
@@ -284,35 +324,6 @@ def predict_content_cf_revised(user_id, vehicle_id_to_predict_str, current_user_
         return user_specific_mean
     predicted_rating = np.mean(user_ratings_for_similar_items)
     return np.clip(predicted_rating, MIN_RATING, MAX_RATING)
-
-@jwt.expired_token_loader
-def expired_token_callback(jwt_header, jwt_payload): return jsonify(msg="Token has expired", error_code="TOKEN_EXPIRED"), 401
-@jwt.invalid_token_loader
-def invalid_token_callback(error_string): return jsonify(msg=f"Invalid Token: {error_string}", error_code="INVALID_TOKEN"), 422
-@jwt.unauthorized_loader
-def missing_token_callback(error_string): return jsonify(msg=f"Authorization Required: {error_string}", error_code="AUTHORIZATION_REQUIRED"), 401
-@jwt.needs_fresh_token_loader
-def token_not_fresh_callback(jwt_header, jwt_data): return jsonify(msg="Fresh token required", error_code="FRESH_TOKEN_REQUIRED"), 401
-
-def get_current_user_id_from_jwt():
-    jwt_user_id_str = get_jwt_identity()
-    try: return int(jwt_user_id_str)
-    except (ValueError, TypeError):
-        app.logger.error(f"Invalid JWT identity: '{jwt_user_id_str}'. Cannot convert to int.")
-        raise ValueError(f"Invalid user identity in token: {jwt_user_id_str}")
-
-def admin_required(fn):
-    @wraps(fn)
-    @jwt_required()
-    def wrapper(*args, **kwargs):
-        current_user_claims = get_jwt()
-        user_role = current_user_claims.get('role')
-        if user_role != 'admin':
-            user_id_for_log = get_jwt_identity()
-            app.logger.warning(f"Admin access denied for user ID: {user_id_for_log}. Role in token: '{user_role}'")
-            return jsonify(msg="Administration rights required."), 403
-        return fn(*args, **kwargs)
-    return wrapper
 
 @app.route('/api/auth/register', methods=['POST'])
 def register():
