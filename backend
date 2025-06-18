@@ -367,6 +367,7 @@ def tf_recs(uid):
         })
     return jsonify(out)
 
+# эндпоинт пользователя
 @app.route('/api/auth/register', methods=['POST'])
 def register():
     data = request.get_json(silent=True)
