@@ -491,7 +491,7 @@ def manage_cart():
 @app.route('/api/cart/<string:vid>', methods=['DELETE'])
 @jwt_required()
 def remove_cart(vid):
-    try: user_id = get_current_user_id_from_jwt()
+    try: user_id = get_current_user_id()
     except ValueError as e: return jsonify(msg=str(e), error_code="INVALID_USER_ID"), 400
     item = CartItem.query.filter_by(user_id=user_id, vehicle_id=vid).first()
     if not item: return jsonify({'error': 'Item not in cart'}), 404
