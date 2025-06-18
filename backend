@@ -546,7 +546,7 @@ def list_my_reviews():
 @jwt_required()
 def add_review():
     try:
-        user_id = get_current_user_id_from_jwt()
+        user_id = get_current_user_id()
     except ValueError as e:
         app.logger.error(f"AddReview: Invalid user ID in token: {e}")
         return jsonify(msg=str(e), error_code="INVALID_USER_ID"), 400
@@ -582,7 +582,7 @@ def add_review():
         return jsonify({'error': 'Order not found'}), 404
     if order.user_id != user_id:
         app.logger.warning(f"AddReview: User {user_id} - Order ID {oid} does not belong to this user (belongs to {order.user_id}).")
-        return jsonify({'error': 'Invalid order or not user order'}), 403 
+        return jsonify({'error': 'Invalid order or not user order'}), 403
 
     if not any(it.vehicle_id == vid_str for it in order.items):
         app.logger.warning(f"AddReview: User {user_id} - Vehicle ID {vid_str} not found in order ID {oid}.")
