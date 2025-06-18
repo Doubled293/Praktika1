@@ -1146,7 +1146,7 @@ def admin_add_new_vehicle():
 @admin_required
 def admin_edit_vehicle(vehicle_id):
     vehicle = Vehicle.query.get_or_404(vehicle_id)
-    data = request.get_json()
+    data = request.get_json(silent=True)
     if not data: return jsonify({'error': 'Request body must be JSON and not empty.'}), 400
     try:
         if 'brand' in data:
@@ -1160,7 +1160,8 @@ def admin_edit_vehicle(vehicle_id):
             vehicle.body_type = body_type_val
         if 'year' in data:
             year_val = int(data['year'])
-            if not (1900 <= year_val <= datetime.now().year + 2): return jsonify({'error': f'Invalid year: {year_val}.'}), 400
+            now_year = datetime.now().year
+            if not (1900 <= year_val <= now_year + 2): return jsonify({'error': f'Invalid year: {year_val}. Must be 1900-{now_year+2}.'}), 400
             vehicle.year = year_val
         if 'gearbox' in data:
             gearbox_val = str(data['gearbox']).strip()
@@ -1172,17 +1173,18 @@ def admin_edit_vehicle(vehicle_id):
             vehicle.drive = drive_val
         if 'power_hp' in data:
             power_hp_val = int(data['power_hp'])
-            if not (0 < power_hp_val < 5000): return jsonify({'error': f'Invalid power_hp: {power_hp_val}.'}), 400
+            if not (0 < power_hp_val < 5000): return jsonify({'error': f'Invalid power_hp: {power_hp_val}. Must be 1-4999.'}), 400
             vehicle.power_hp = power_hp_val
         if 'seats' in data:
             seats_val = int(data['seats'])
-            if not (1 <= seats_val <= 20): return jsonify({'error': f'Invalid seats: {seats_val}.'}), 400
+            if not (1 <= seats_val <= 20): return jsonify({'error': f'Invalid seats: {seats_val}. Must be 1-20.'}), 400
             vehicle.seats = seats_val
         if 'price_per_day_usd' in data:
-            price_val = Decimal(data['price_per_day_usd'])
+            price_val = Decimal(str(data['price_per_day_usd']))
             if not (price_val > 0): return jsonify({'error': 'Price must be a positive value.'}), 400
             vehicle.price_per_day_usd = price_val
         if 'image_url' in data: vehicle.image_url = str(data.get('image_url', '')).strip() or None
+
         db.session.commit()
         app.logger.info(f"Admin updated vehicle ID: {vehicle_id}.")
         return jsonify({
