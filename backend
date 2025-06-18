@@ -1007,27 +1007,30 @@ def admin_update_user(user_id_to_update):
 @admin_required
 def admin_delete_user(user_id_to_delete):
     try:
-        current_admin_id = get_current_user_id_from_jwt()
+        current_admin_id = get_current_user_id()
         if user_id_to_delete == current_admin_id:
             return jsonify({'error': 'You cannot delete your own account.'}), 403
 
         user_to_del = User.query.get_or_404(user_id_to_delete)
 
-        Review.query.filter_by(user_id=user_id_to_delete).delete()
+        Review.query.filter_by(user_id=user_id_to_delete).delete(synchronize_session=False)
         orders = Order.query.filter_by(user_id=user_id_to_delete).all()
         for order in orders:
-            OrderItem.query.filter_by(order_id=order.id).delete()
+            OrderItem.query.filter_by(order_id=order.id).delete(synchronize_session=False)
             db.session.delete(order)
+
+        CartItem.query.filter_by(user_id=user_id_to_delete).delete(synchronize_session=False)
 
         db.session.delete(user_to_del)
         db.session.commit()
 
         app.logger.info(f"Admin deleted user ID: {user_id_to_delete}")
         return jsonify({'message': f'User ID {user_id_to_delete} deleted successfully.'}), 200
-
+    except ValueError as e:
+        app.logger.error(f"Admin delete user: Error parsing current admin ID from JWT: {e}")
+        return jsonify({'error': 'Internal server error processing admin identity.'}), 500
     except HTTPException as he:
         return jsonify({'error': he.description}), he.code
-
     except Exception as e:
         db.session.rollback()
         app.logger.error(f"Error deleting user {user_id_to_delete}: {e}", exc_info=True)
