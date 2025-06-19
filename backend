@@ -672,124 +672,23 @@ def get_hybrid_personal_recommendations(user_id):
         app.logger.error(f"Hybrid recommendations failed for user {user_id}: {e}", exc_info=True)
         return jsonify(msg="Internal server error"), 500
 
-@app.route('/api/vehicles/<string:vehicle_id_target>/recommendations', methods=['GET'])
-def recommendations_by_vehicle_revised(vehicle_id_target):
-    app.logger.debug(f"SimilarVehicles: Request for target_id: {vehicle_id_target}")
-    if item_knn is None or item_pipeline is None or X_items_index is None or not X_ITEMS_PIPELINE_COLS:
-        app.logger.warning("SimilarVehicles: Core artifacts missing for content-based similar items. Returning [].")
-        return jsonify([])
-
-    target_v_db = db.session.get(Vehicle, vehicle_id_target)
-    if not target_v_db:
-        app.logger.warning(f"SimilarVehicles: Target vehicle ID {vehicle_id_target} not in DB. Returning [].")
-        return jsonify([])
-    app.logger.debug(f"SimilarVehicles: Target vehicle: {target_v_db.brand} {target_v_db.model}")
-
-    year_min_attr = target_v_db.year - 6
-    year_max_attr = target_v_db.year + 6
-    power_min_attr = target_v_db.power_hp - 80
-    power_max_attr = target_v_db.power_hp + 80
-
-    attribute_candidate_vids_query = db.session.query(Vehicle.vehicle_id) \
-        .filter(Vehicle.vehicle_id != vehicle_id_target)
-
-    if target_v_db.brand:
-        attribute_candidate_vids_query = attribute_candidate_vids_query.filter(Vehicle.brand == target_v_db.brand)
-    if target_v_db.body_type:
-        attribute_candidate_vids_query = attribute_candidate_vids_query.filter(Vehicle.body_type == target_v_db.body_type)
-
-    attribute_candidate_vids_query = attribute_candidate_vids_query.filter(Vehicle.year.between(year_min_attr, year_max_attr))
-    attribute_candidate_vids_query = attribute_candidate_vids_query.filter(Vehicle.power_hp.between(power_min_attr, power_max_attr))
-
-    attribute_candidate_vids = {vid for (vid,) in attribute_candidate_vids_query.limit(50).all()}
-    app.logger.debug(f"SimilarVehicles: {len(attribute_candidate_vids)} candidates after attribute filtering for {vehicle_id_target}.")
-
-
-    item_feats_dict = {}
-    for feat_name in X_ITEMS_PIPELINE_COLS:
-        if feat_name == 'model_grouped':
-            raw_model = getattr(target_v_db, 'model', None)
-            item_feats_dict['model_grouped'] = raw_model if raw_model and raw_model in TOP_MODELS_FOR_GROUPING else 'Other_Model'
-        else: item_feats_dict[feat_name] = getattr(target_v_db, feat_name, None)
-
-    app.logger.debug(f"SimilarVehicles: Features for pipeline for target {vehicle_id_target}: {item_feats_dict}")
+@app.route('/api/vehicles/<string:vehicle_id>/recommendations', methods=['GET'])
+def get_similar_vehicle_recommendations(vehicle_id):
+    #  Рекомендации похожих автомобилей (Content-Based). 
+    if recommender_service is None:
+        return jsonify(msg="Recommender service is not available."), 503
     try:
-        item_feats_df = pd.DataFrame([item_feats_dict])[X_ITEMS_PIPELINE_COLS]
-        transformed_v_vec = item_pipeline.transform(item_feats_df)
-        app.logger.debug(f"SimilarVehicles: Target item vector transformed. Shape: {transformed_v_vec.shape}")
+        recommended_ids = recommender_service.get_content_similar_vehicles(target_vehicle_id=vehicle_id, num_recommendations=4)
+        if not recommended_ids:
+            return jsonify([])
+        
+        vehicles = Vehicle.query.filter(Vehicle.vehicle_id.in_(recommended_ids)).all()
+        vehicle_map = {str(v.vehicle_id): v.to_dict() for v in vehicles}
+        sorted_vehicles_data = [vehicle_map[vid] for vid in recommended_ids if vid in vehicle_map]
+        return jsonify(sorted_vehicles_data)
     except Exception as e:
-        app.logger.error(f"SimilarVehicles: Error in item_pipeline.transform for target {vehicle_id_target}: {e}", exc_info=True)
-        return jsonify([])
-
-    num_items_in_X_items_index = len(X_items_index) if X_items_index is not None else 0
-    FINAL_N_RECS_CB = 4
-    desired_neighbors_for_query = FINAL_N_RECS_CB * 5 + 1
-
-    k_param_query = min(desired_neighbors_for_query,
-                        item_knn.n_neighbors if hasattr(item_knn, 'n_neighbors') else desired_neighbors_for_query,
-                        num_items_in_X_items_index)
-
-    if k_param_query <= 0 :
-        app.logger.warning(f"SimilarVehicles: k_param_query for KNN is {k_param_query}. Insufficient items in KNN index. Returning [].")
-        return jsonify([])
-
-    app.logger.debug(f"SimilarVehicles: Querying KNN with k_param_query = {k_param_query}")
-    try:
-        distances, neigh_indices_flat = item_knn.kneighbors(transformed_v_vec, n_neighbors=k_param_query)
-        neigh_indices_flat = neigh_indices_flat.flatten()
-        app.logger.debug(f"SimilarVehicles: KNN Neighbors found. Indices: {neigh_indices_flat}, Distances: {distances.flatten()}")
-    except Exception as e:
-        app.logger.error(f"SimilarVehicles: Error in item_knn.kneighbors for target {vehicle_id_target}: {e}", exc_info=True)
-        return jsonify([])
-
-    knn_similar_vids_list_str = []
-    for i, idx_in_X_items_index in enumerate(neigh_indices_flat):
-        if 0 <= idx_in_X_items_index < num_items_in_X_items_index:
-            item_id_from_artifact = X_items_index[idx_in_X_items_index]
-            if item_id_from_artifact != vehicle_id_target:
-                if attribute_candidate_vids and item_id_from_artifact in attribute_candidate_vids:
-                    knn_similar_vids_list_str.append(item_id_from_artifact)
-                elif not attribute_candidate_vids:
-                    knn_similar_vids_list_str.append(item_id_from_artifact)
-
-        if len(knn_similar_vids_list_str) >= FINAL_N_RECS_CB:
-            break
-    
-    if len(knn_similar_vids_list_str) < FINAL_N_RECS_CB:
-        app.logger.debug(f"SimilarVehicles: Filling remaining slots from KNN results as attribute-filtered KNN count is {len(knn_similar_vids_list_str)}")
-        for i, idx_in_X_items_index in enumerate(neigh_indices_flat):
-            if 0 <= idx_in_X_items_index < num_items_in_X_items_index:
-                item_id_from_artifact = X_items_index[idx_in_X_items_index]
-                if item_id_from_artifact != vehicle_id_target and item_id_from_artifact not in knn_similar_vids_list_str:
-                    knn_similar_vids_list_str.append(item_id_from_artifact)
-            if len(knn_similar_vids_list_str) >= FINAL_N_RECS_CB:
-                break
-
-
-    app.logger.debug(f"SimilarVehicles: Final similar vehicle IDs (max {FINAL_N_RECS_CB}): {knn_similar_vids_list_str}")
-    top_sim_ids_str = knn_similar_vids_list_str[:FINAL_N_RECS_CB]
-
-    if not top_sim_ids_str:
-        app.logger.info(f"SimilarVehicles: No similar vehicles found for {vehicle_id_target} after KNN and filtering. Returning [].")
-        return jsonify([])
-
-    recs_db = db.session.query(Vehicle, func.avg(Review.rating).label('avg_r'), func.count(Review.id).label('rev_c'))\
-        .outerjoin(Review).filter(Vehicle.vehicle_id.in_(top_sim_ids_str)).group_by(Vehicle.vehicle_id).all()
-
-    recs_map_cb = {str(v.vehicle_id): {'data': v, 'avg_r': avg_r, 'rev_c': rev_c} for v, avg_r, rev_c in recs_db}
-
-    final_recs_cb_list = []
-    for vid_str_sim in top_sim_ids_str:
-        if vid_str_sim in recs_map_cb:
-            entry = recs_map_cb[vid_str_sim]
-            v_obj, avg_r, rev_c = entry['data'], entry['avg_r'], entry['rev_c']
-            final_recs_cb_list.append({
-                'vehicle_id': v_obj.vehicle_id, 'brand': v_obj.brand, 'model': v_obj.model, 'body_type': v_obj.body_type,
-                'year': v_obj.year, 'gearbox': v_obj.gearbox, 'drive': v_obj.drive, 'power_hp': v_obj.power_hp, 'seats': v_obj.seats,
-                'price_per_day_usd': float(v_obj.price_per_day_usd), 'image_url': v_obj.image_url,
-                'avg_rating': float(avg_r) if avg_r else None, 'review_count': rev_c})
-    app.logger.debug(f"SimilarVehicles: Final recommendations count: {len(final_recs_cb_list)} for target {vehicle_id_target}")
-    return jsonify(final_recs_cb_list)
+        app.logger.error(f"Similar vehicle recommendations failed for {vehicle_id}: {e}", exc_info=True)
+        return jsonify(msg="Internal server error"), 500
 
 @app.route('/api/admin/users', methods=['GET'])
 @admin_required
