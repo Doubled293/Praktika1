@@ -256,30 +256,19 @@ def predict_content_cf_revised(user_id, vehicle_id_to_predict_str, current_user_
 @app.route('/api/tf-recs/<string:uid>', methods=['GET'])
 @jwt_required(optional=True)
 def tf_recs(uid):
-    if not user_lookup or not user_model or item_embeddings_norm is None or not tf_item_ids:
-        app.logger.error(f"TF components not available for tf-recs for user {uid}. Aborting.")
-        return jsonify([])
     try:
-        idx = user_lookup(tf.constant([str(uid)])).numpy()[0]
-        emb = user_model.predict(np.array([idx]))[0]
-        emb = emb / (np.linalg.norm(emb)+1e-10)
-        scores = item_embeddings_norm.dot(emb)
-        k=10
-        topk = np.argpartition(-scores, k)[:k]
-        topk = topk[np.argsort(-scores[topk])]
-        rec_ids = [tf_item_ids[i] for i in topk]
+        rec_ids = recommender_service.get_hybrid_recommendations(user_id=int(uid), num_recommendations=10)
     except Exception as e:
         app.logger.error(f"tf-recs failed for {uid}: {e}", exc_info=True)
-        return jsonify([])
+        return jsonify([]), 500
 
-    # загрузка данных об автомобиле
     vehicles = Vehicle.query.filter(Vehicle.vehicle_id.in_(rec_ids)).all()
-    vmap = {v.vehicle_id:v for v in vehicles}
-    out = []
+    vmap = {v.vehicle_id: v for v in vehicles}
+    output = []
     for vid in rec_ids:
         v = vmap.get(vid)
         if not v: continue
-        out.append({
+        output.append({
             'vehicle_id': v.vehicle_id,
             'brand':       v.brand,
             'model':       v.model,
@@ -292,7 +281,7 @@ def tf_recs(uid):
             'price_per_day_usd': float(v.price_per_day_usd),
             'image_url':   v.image_url
         })
-    return jsonify(out)
+    return jsonify(output)
 
 # эндпоинт пользователя
 @app.route('/api/auth/register', methods=['POST'])
