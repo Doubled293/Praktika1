@@ -89,62 +89,44 @@ with app.app_context():
     db.create_all()
     app.logger.info("db.create_all() called (creates tables if they don't exist).")
 
-    user_role_created = False
-    admin_role_created = False
     if not Role.query.filter_by(name='user').first():
-        app.logger.info("Default 'user' role not found, creating it.")
         db.session.add(Role(name='user'))
-        user_role_created = True
+        app.logger.info("Default 'user' role created.")
     if not Role.query.filter_by(name='admin').first():
-        app.logger.info("Default 'admin' role not found, creating it.")
         db.session.add(Role(name='admin'))
-        admin_role_created = True
-
+        app.logger.info("Default 'admin' role created.")
     if db.session.new:
         db.session.commit()
-        app.logger.info("Default roles committed if they were created.")
-    else:
-        app.logger.info("Default roles already existed or no new roles were added.")
+        
     if not Vehicle.query.first():
-        app.logger.info("No vehicles found in DB, attempting to load from CSV.")
-        csv_path = os.path.join(os.path.dirname(__file__), 'data', 'project_vehicle_dataset.csv')
+        app.logger.info("No vehicles found, attempting to load from CSV.")
+        csv_path = os.path.join(BASE_DIR, 'data', 'project_vehicle_dataset.csv')
         if os.path.exists(csv_path):
-            app.logger.info(f"Vehicles CSV file found at {csv_path}.")
             try:
-                with open(csv_path, newline='', encoding='utf-8') as f:
-                    reader = csv.DictReader(f)
-                    vehicles_to_add = []
-                    required_cols_for_value_check = ['vehicle_id', 'brand', 'body_type', 'year', 'gearbox', 'drive', 'power_hp', 'seats', 'price_per_day_usd']
-                    for row_num, row in enumerate(reader):
-                        try:
-                            if not all(col in row and str(row[col]).strip() for col in required_cols_for_value_check):
-                                app.logger.warning(f"App CSV Load: Missing required data in row {row_num+1}. Skipping. Row: {row}")
-                                continue
-                            vehicle_id_str = str(row['vehicle_id']).strip()
-                            image_url_val = str(row.get('image', '')).strip()
-                            if not image_url_val or image_url_val.lower() == 'n/a': image_url_val = None
-                            model_val = str(row.get('model', '')).strip()
-                            if not model_val: model_val = None
-                            v = Vehicle(
-                                vehicle_id=vehicle_id_str, brand=str(row['brand']).strip(), model=model_val,
-                                body_type=str(row['body_type']).strip(), year=int(row['year']),
-                                gearbox=str(row['gearbox']).strip(), drive=str(row['drive']).strip(),
-                                power_hp=int(row['power_hp']), seats=int(row['seats']),
-                                price_per_day_usd=Decimal(row['price_per_day_usd']), image_url=image_url_val
-                            )
-                            vehicles_to_add.append(v)
-                        except KeyError as ke: app.logger.error(f"App CSV Load Error: Missing key {ke} in row {row_num+1}: {row}")
-                        except ValueError as ve: app.logger.error(f"App CSV Load Error: Value error {ve} in row {row_num+1}: {row}")
-                        except Exception as e_inner: app.logger.error(f"App CSV Load: Generic error in row {row_num+1}: {e_inner}. Row: {row}", exc_info=True)
-                    if vehicles_to_add:
-                        db.session.bulk_save_objects(vehicles_to_add); db.session.commit()
-                        app.logger.info(f"{len(vehicles_to_add)} vehicles loaded from CSV into app DB and committed.")
-                    else: app.logger.info("No new vehicles to add from CSV (or all rows had errors) during app startup.")
+                vehicles_df = pd.read_csv(csv_path, dtype={'vehicle_id': str, 'model': str})
+                vehicles_df.replace({np.nan: None}, inplace=True)
+                vehicles_df['price_per_day_usd'] = pd.to_numeric(
+                    vehicles_df['price_per_day_usd'], errors='coerce'
+                )
+                vehicles_df.dropna(
+                    subset=['vehicle_id', 'brand', 'year', 'price_per_day_usd'],
+                    inplace=True
+                )
+                
+                vehicles_to_add = [
+                    Vehicle(**row) for row in vehicles_df.to_dict('records')
+                ]
+                if vehicles_to_add:
+                    db.session.bulk_save_objects(vehicles_to_add)
+                    db.session.commit()
+                    app.logger.info(f"{len(vehicles_to_add)} vehicles loaded from CSV.")
             except Exception as e:
-                app.logger.error(f"Error loading vehicles from CSV during app startup: {e}", exc_info=True)
+                app.logger.error(f"Error loading vehicles from CSV: {e}", exc_info=True)
                 db.session.rollback()
-        else: app.logger.warning(f"Vehicles CSV file not found at {csv_path} during app startup.")
-    else: app.logger.info("Vehicles already exist in the database, skipping CSV load during app startup.")
+        else:
+            app.logger.warning(f"Vehicles CSV file not found at {csv_path}.")
+    else:
+        app.logger.info("Vehicles already exist, skipping CSV load.")
 
 # Обратные вызоы JWT
 @jwt.expired_token_loader
