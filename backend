@@ -286,7 +286,6 @@ def tf_recs(uid):
 # эндпоинт пользователя
 @app.route('/api/auth/register', methods=['POST'])
 def register():
-    # ... (код этого эндпоинта остается без изменений) ...
     data = request.get_json()
     if not data or not data.get('username') or not data.get('password'):
         return jsonify({'error': 'Username and password required'}), 400
