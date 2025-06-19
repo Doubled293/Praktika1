@@ -578,68 +578,32 @@ def delete_review(rid):
 
 
 @app.route('/api/recommendations', methods=['GET'])
-@jwt_required(optional=True)
 def get_general_recommendations():
-    user_id = None
+    # Общие рекомендации для главной страницы (самые популярные)
     try:
-        if get_jwt_identity(): user_id = get_current_user_id()
-    except Exception: user_id = None
-    recent_vids_str = set()
-    MIN_ITEMS_FOR_SIMILARITY = 1
-    MAX_SOURCE_ITEMS = 3
-    if user_id:
-        orders = Order.query.filter_by(user_id=user_id).order_by(Order.created_at.desc()).limit(MAX_SOURCE_ITEMS).all()
-        for o in orders:
-            for item in o.items: recent_vids_str.add(str(item.vehicle_id))
-            if len(recent_vids_str) >= MAX_SOURCE_ITEMS: break
-        if len(recent_vids_str) < MIN_ITEMS_FOR_SIMILARITY:
-            cart_items = CartItem.query.filter_by(user_id=user_id).limit(MAX_SOURCE_ITEMS - len(recent_vids_str)).all()
-            for item in cart_items: recent_vids_str.add(str(item.vehicle_id))
-    if not recent_vids_str or len(recent_vids_str) < MIN_ITEMS_FOR_SIMILARITY :
-        app.logger.info(f"GeneralRecommendations: User {user_id if user_id else 'Guest'} has insufficient history. Serving popular items.")
-        pop_recs_q = db.session.query(Vehicle, func.avg(Review.rating).label('avg_r'), func.count(Review.id).label('rev_c'))\
-            .outerjoin(Review).group_by(Vehicle.vehicle_id)\
-            .order_by(func.count(Review.id).desc(), func.avg(Review.rating).desc().nullslast()).limit(8).all()
-        return jsonify([{'vehicle_id': v.vehicle_id, 'brand': v.brand, 'model': v.model, 'body_type': v.body_type,
-                         'year': v.year, 'gearbox': v.gearbox, 'drive': v.drive, 'power_hp': v.power_hp, 'seats': v.seats,
-                         'price_per_day_usd': float(v.price_per_day_usd), 'image_url': v.image_url,
-                         'avg_rating': float(avg_r) if avg_r else None, 'review_count': rev_c} for v, avg_r, rev_c in pop_recs_q])
-    recent_vehicles_objs = Vehicle.query.filter(Vehicle.vehicle_id.in_(list(recent_vids_str))).all()
-    body_types = list(set(v.body_type for v in recent_vehicles_objs if v.body_type))
-    brands = list(set(v.brand for v in recent_vehicles_objs if v.brand))
-    seen_vids_for_this_user_query_str = recent_vids_str.copy()
-    if user_id:
-        seen_vids_for_this_user_query_str.update(item.vehicle_id for item in CartItem.query.filter_by(user_id=user_id).all())
-        all_ordered_items = OrderItem.query.join(Order).filter(Order.user_id == user_id).all()
-        seen_vids_for_this_user_query_str.update(str(item.vehicle_id) for item in all_ordered_items)
-    q_filters = []
-    if body_types: q_filters.append(Vehicle.body_type.in_(body_types))
-    if brands: q_filters.append(Vehicle.brand.in_(brands))
-    if not q_filters:
-        app.logger.warning(f"GeneralRecommendations: User {user_id} - no criteria from history. Falling back to popular.")
-        pop_recs_q = db.session.query(Vehicle, func.avg(Review.rating).label('avg_r'), func.count(Review.id).label('rev_c'))\
-            .outerjoin(Review).group_by(Vehicle.vehicle_id)\
-            .order_by(func.count(Review.id).desc(), func.avg(Review.rating).desc().nullslast()).limit(8).all()
-        return jsonify([{'vehicle_id': v.vehicle_id, 'brand': v.brand, 'model': v.model, 'body_type': v.body_type,
-                         'year': v.year, 'gearbox': v.gearbox, 'drive': v.drive, 'power_hp': v.power_hp, 'seats': v.seats,
-                         'price_per_day_usd': float(v.price_per_day_usd), 'image_url': v.image_url,
-                         'avg_rating': float(avg_r) if avg_r else None, 'review_count': rev_c} for v, avg_r, rev_c in pop_recs_q])
-    recs_q_builder = db.session.query(Vehicle, func.avg(Review.rating).label('avg_r'), func.count(Review.id).label('rev_c'))\
-        .outerjoin(Review).filter(or_(*q_filters))
-    if seen_vids_for_this_user_query_str:
-        recs_q_builder = recs_q_builder.filter(~Vehicle.vehicle_id.in_(list(seen_vids_for_this_user_query_str)))
-    final_recs_q = recs_q_builder.group_by(Vehicle.vehicle_id)\
-        .order_by(func.count(Review.id).desc(), func.avg(Review.rating).desc().nullslast(), func.random()).limit(4).all()
-    if not final_recs_q:
-        app.logger.info(f"GeneralRecommendations: User {user_id} - no recommendations from history similarity. Falling back to popular.")
-        pop_recs_q = db.session.query(Vehicle, func.avg(Review.rating).label('avg_r'), func.count(Review.id).label('rev_c'))\
-            .outerjoin(Review).group_by(Vehicle.vehicle_id)\
-            .order_by(func.count(Review.id).desc(), func.avg(Review.rating).desc().nullslast()).limit(4).all()
-        final_recs_q = pop_recs_q
-    return jsonify([{'vehicle_id': v.vehicle_id, 'brand': v.brand, 'model': v.model, 'body_type': v.body_type,
-                     'year': v.year, 'gearbox': v.gearbox, 'drive': v.drive, 'power_hp': v.power_hp, 'seats': v.seats,
-                     'price_per_day_usd': float(v.price_per_day_usd), 'image_url': v.image_url,
-                     'avg_rating': float(avg_r) if avg_r else None, 'review_count': rev_c} for v, avg_r, rev_c in final_recs_q])
+        popular_vehicles_query = (
+            db.session.query(
+                Vehicle,
+                func.avg(Review.rating).label('avg_rating'),
+                func.count(Review.id).label('review_count')
+            )
+            .outerjoin(Review, Vehicle.vehicle_id == Review.vehicle_id)
+            .group_by(Vehicle.vehicle_id)
+            .order_by(func.count(Review.id).desc(), func.avg(Review.rating).desc())
+            .limit(10)
+            .all()
+        )
+        
+        result = [{
+            **v.to_dict(),
+            'avg_rating': float(avg_rating) if avg_rating is not None else None,
+            'review_count': review_count
+        } for v, avg_rating, review_count in popular_vehicles_query]
+            
+        return jsonify(result)
+    except Exception as e:
+        app.logger.error(f"Error getting general recommendations: {e}", exc_info=True)
+        return jsonify(error="Could not retrieve recommendations."), 500
 
 @app.route('/api/recommendations/personal', methods=['GET'])
 @jwt_required()
