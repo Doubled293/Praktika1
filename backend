@@ -145,22 +145,16 @@ def missing_token_callback(err_string):
 # Использование пользователя для улучшения обработки журнала
 def get_current_user_id():
     jwt_user_id_str = get_jwt_identity()
-    try:
-        return int(jwt_user_id_str)
-    except (ValueError, TypeError):
-        app.logger.error(f"Invalid JWT identity: '{jwt_user_id_str}'. Cannot convert to int.")
-        raise ValueError(f"Invalid user identity in token: {jwt_user_id_str}")
+    if not jwt_user_id_str:
+        raise ValueError("JWT identity is missing.")
+    return int(jwt_user_id_str)
 
 def admin_required(fn):
     @wraps(fn)
     @jwt_required()
     def wrapper(*args, **kwargs):
-        current_user_claims = get_jwt()
-        user_role = current_user_claims.get('role')
-        if user_role != 'admin':
-            user_id_for_log = get_jwt_identity() 
-            app.logger.warning(f"Admin access denied for user ID: {user_id_for_log}. Role in token: '{user_role}'")
-            return jsonify(msg="Administration rights required."), 403 
+        if get_jwt().get('role') != 'admin':
+            return jsonify(msg="Administration rights required."), 403
         return fn(*args, **kwargs)
     return wrapper
 
