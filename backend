@@ -305,18 +305,15 @@ def register():
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
-    data = request.get_json(silent=True)
-    if not data: return jsonify({'error': 'Request body must be JSON and not empty'}), 400
-    username, password = data.get('username'), data.get('password')
-    if not username or not password: return jsonify({'error': 'Username and password required'}), 400
-    user = User.query.filter_by(username=username).first()
-    if not user or not bcrypt.check_password_hash(user.password_hash, password):
-        app.logger.warning(f"Login attempt failed for username: {username}")
+    data = request.get_json()
+    if not data or not data.get('username') or not data.get('password'):
+        return jsonify({'error': 'Username and password required'}), 400
+    user = User.query.filter_by(username=data['username']).first()
+    if not user or not bcrypt.check_password_hash(user.password_hash, data['password']):
         return jsonify({'error': 'Invalid username or password'}), 401
     additional_claims = {"role": user.role.name if user.role else "user"}
-    if not user.role: app.logger.error(f"User {user.id} ('{user.username}') has no role assigned at login!")
     token = create_access_token(identity=str(user.id), additional_claims=additional_claims)
-    app.logger.info(f"User '{username}' (ID: {user.id}, Role: {additional_claims.get('role')}) logged in.")
+    app.logger.info(f"User '{data['username']}' (ID: {user.id}) logged in.")
     return jsonify({'token': token}), 200
 
 @app.route('/api/vehicles', methods=['GET'])
