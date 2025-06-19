@@ -286,19 +286,20 @@ def tf_recs(uid):
 # эндпоинт пользователя
 @app.route('/api/auth/register', methods=['POST'])
 def register():
-    data = request.get_json(silent=True)
-    if not data: return jsonify({'error': 'Request body must be JSON and not empty'}), 400
-    username, password = data.get('username'), data.get('password')
-    if not username or not password: return jsonify({'error': 'Username and password required'}), 400
-    if User.query.filter_by(username=username).first(): return jsonify({'error': 'User already exists'}), 409
+    # ... (код этого эндпоинта остается без изменений) ...
+    data = request.get_json()
+    if not data or not data.get('username') or not data.get('password'):
+        return jsonify({'error': 'Username and password required'}), 400
+    if User.query.filter_by(username=data['username']).first():
+        return jsonify({'error': 'User already exists'}), 409
     role = Role.query.filter_by(name='user').first()
     if not role:
         app.logger.error("CRITICAL: 'user' role not found during registration.")
-        return jsonify({'error': 'Server configuration error, please try again later.'}), 500
-    pw_hash = bcrypt.generate_password_hash(password).decode('utf-8')
-    user = User(username=username, password_hash=pw_hash, role_id=role.id)
+        return jsonify({'error': 'Server configuration error'}), 500
+    pw_hash = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+    user = User(username=data['username'], password_hash=pw_hash, role_id=role.id)
     db.session.add(user); db.session.commit()
-    app.logger.info(f"User '{username}' registered with ID {user.id} and role '{role.name}'.")
+    app.logger.info(f"User '{data['username']}' registered with ID {user.id}.")
     return jsonify({'message': 'Registered successfully. Please login.'}), 201
 
 
