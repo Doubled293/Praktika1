@@ -31,13 +31,18 @@ from recommendation_service import RecommenderService
 
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}}, supports_credentials=True)
+CORS(app,
+     resources={r"/api/*": {"origins": "http://localhost:5173"}},
+     supports_credentials=True, methods=["GET","POST","PUT","DELETE","OPTIONS"],
+     allow_headers=["Content-Type","Authorization"])
 
-app.logger.setLevel(logging.DEBUG)
+MIN_RATING = 1.0
+MAX_RATING = 5.0
+
+app.logger.setLevel(logging.INFO)
 handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-app.logger.handlers = [handler] 
-
+app.logger.handlers = [handler]
 app.logger.info("Flask application logger configured.")
 
 # config
