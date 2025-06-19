@@ -605,103 +605,48 @@ def get_general_recommendations():
         app.logger.error(f"Error getting general recommendations: {e}", exc_info=True)
         return jsonify(error="Could not retrieve recommendations."), 500
 
-@app.route('/api/recommendations/personal', methods=['GET'])
+@app.route('/api/recommendations/personal', methods=['OPTIONS', 'GET'])
+@cross_origin(origins="http://localhost:5173", supports_credentials=True)
 @jwt_required()
-def recommendations_personal_revised():
-    try: user_id = get_current_user_id()
-    except ValueError as e: return jsonify(msg=str(e), error_code="INVALID_USER_ID"), 400
-    app.logger.debug(f"PersonalRecommendations: Request for user_id: {user_id}")
-    user_actual_reviews_db = Review.query.filter_by(user_id=user_id).all()
-    current_user_actual_history_for_prediction = {str(r.vehicle_id): float(r.rating) for r in user_actual_reviews_db}
-    MIN_REVIEWS_FOR_PERSONAL = 1
-    if not current_user_actual_history_for_prediction or len(current_user_actual_history_for_prediction) < MIN_REVIEWS_FOR_PERSONAL:
-        app.logger.info(f"PersonalRecommendations: User {user_id} has {len(current_user_actual_history_for_prediction)} actual reviews. Returning empty list.")
-        return jsonify([])
-    app.logger.debug(f"PersonalRecommendations: User {user_id} has {len(current_user_actual_history_for_prediction)} items in actual history.")
+def recommendations_personal():
+    if request.method == 'OPTIONS':
+        return '', 204
 
-    hist_vids = list(current_user_actual_history_for_prediction.keys())
-    hist_vehicles = db.session.query(Vehicle).filter(Vehicle.vehicle_id.in_(hist_vids)).all()
+    # Получаем текущего пользователя из токена
+    user_id = get_jwt_identity()
 
-    if not hist_vehicles:
-        app.logger.warning(f"PersonalRecommendations: User {user_id} - No vehicle objects found for historical VIDs. Returning empty list.")
-        return jsonify([])
+    # Вызываем гибридную нейросеть
+    rec_ids = recommender_service.get_hybrid_recommendations(
+        user_id=int(user_id),
+        num_recommendations=10
+    )
 
-    brands = {v.brand for v in hist_vehicles if v.brand}
-    body_types = {v.body_type for v in hist_vehicles if v.body_type}
-    avg_year = sum(v.year for v in hist_vehicles) / len(hist_vehicles) if hist_vehicles else datetime.now().year
-    avg_power = sum(v.power_hp for v in hist_vehicles) / len(hist_vehicles) if hist_vehicles else 0
+    if not rec_ids:
+        return jsonify([]), 200
 
-    year_min = int(avg_year) - 6
-    year_max = int(avg_year) + 6
-    power_min = int(avg_power) - 80
-    power_max = int(avg_power) + 80
+    vehicles = Vehicle.query.filter(Vehicle.vehicle_id.in_(rec_ids)).all()
+    vmap = {v.vehicle_id: v for v in vehicles}
 
-    all_db_vids_str = [str(v.vehicle_id) for v in db.session.query(Vehicle.vehicle_id).all()]
-    seen_vids_user_str = set(hist_vids)
-    for order in Order.query.filter_by(user_id=user_id).all():
-        for item in order.items: seen_vids_user_str.add(str(item.vehicle_id))
-    for item in CartItem.query.filter_by(user_id=user_id).all(): seen_vids_user_str.add(str(item.vehicle_id))
+    output = []
+    for vid in rec_ids:
+        v = vmap.get(vid)
+        if not v:
+            continue
+        output.append({
+            'vehicle_id':        v.vehicle_id,
+            'brand':             v.brand,
+            'model':             v.model,
+            'body_type':         v.body_type,
+            'year':              v.year,
+            'gearbox':           v.gearbox,
+            'drive':             v.drive,
+            'power_hp':          v.power_hp,
+            'seats':             v.seats,
+            'price_per_day_usd': float(v.price_per_day_usd),
+            'image_url':         v.image_url
+        })
 
-    candidate_vids_str_query = db.session.query(Vehicle.vehicle_id)\
-        .filter(~Vehicle.vehicle_id.in_(list(seen_vids_user_str)))
-
-    if brands: candidate_vids_str_query = candidate_vids_str_query.filter(Vehicle.brand.in_(brands))
-    if body_types: candidate_vids_str_query = candidate_vids_str_query.filter(Vehicle.body_type.in_(body_types))
-    candidate_vids_str_query = candidate_vids_str_query.filter(Vehicle.year.between(year_min, year_max))
-    candidate_vids_str_query = candidate_vids_str_query.filter(Vehicle.power_hp.between(power_min, power_max))
-
-    candidate_vids_str = [vid for (vid,) in candidate_vids_str_query.all()]
-
-    app.logger.debug(f"PersonalRecommendations: User {user_id} - candidates after attribute filter: {len(candidate_vids_str)}")
-
-    if not candidate_vids_str:
-        app.logger.info(f"PersonalRecommendations: User {user_id} - no candidate vehicles left after filtering.")
-        return jsonify([])
-
-    preds = []
-    for vid_str in candidate_vids_str:
-        ucf_p = predict_user_cf_revised(user_id, vid_str, current_user_actual_history_for_prediction)
-        ccf_p = predict_content_cf_revised(user_id, vid_str, current_user_actual_history_for_prediction)
-        ucf_p = global_mean if pd.isna(ucf_p) else ucf_p
-        ccf_p = global_mean if pd.isna(ccf_p) else ccf_p
-        hybrid_p = best_alpha * ucf_p + (1.0 - best_alpha) * ccf_p
-        preds.append({'vehicle_id': vid_str, 'score': hybrid_p})
-
-    FINAL_N_RECS = 10
-    sorted_preds_by_score = sorted(preds, key=lambda x: x['score'], reverse=True)
-    top_cand_ids_str = [p['vehicle_id'] for p in sorted_preds_by_score[:FINAL_N_RECS * 2]]
-
-    if not top_cand_ids_str:
-        app.logger.info(f"PersonalRecommendations: User {user_id} - no candidates after prediction scoring.")
-        return jsonify([])
-
-    recs_q = db.session.query(Vehicle, func.avg(Review.rating).label('avg_r'), func.count(Review.id).label('rev_c'))\
-        .outerjoin(Review).filter(Vehicle.vehicle_id.in_(top_cand_ids_str)).group_by(Vehicle.vehicle_id).all()
-
-    recs_map = {str(v.vehicle_id): {
-        'data': v, 'avg_r': float(avg_r) if avg_r else None, 'rev_c': rev_c,
-        'pred_score': next((p['score'] for p in sorted_preds_by_score if p['vehicle_id'] == str(v.vehicle_id)), global_mean)
-        } for v, avg_r, rev_c in recs_q}
-
-    enriched_recs_list = []
-    for p_item in sorted_preds_by_score[:FINAL_N_RECS*2]:
-        p_item_id_str = p_item['vehicle_id']
-        if p_item_id_str in recs_map:
-            entry = recs_map[p_item_id_str]
-            v_obj, avg_r_val, rev_c_val = entry['data'], entry['avg_r'], entry['rev_c']
-            pred_score_val = entry['pred_score']
-            enriched_recs_list.append({
-                'vehicle_id': v_obj.vehicle_id, 'brand': v_obj.brand, 'model': v_obj.model,
-                'body_type': v_obj.body_type, 'year': v_obj.year, 'gearbox': v_obj.gearbox,
-                'drive': v_obj.drive, 'power_hp': v_obj.power_hp, 'seats': v_obj.seats,
-                'price_per_day_usd': float(v_obj.price_per_day_usd), 'image_url': v_obj.image_url,
-                'predicted_score_for_user': round(pred_score_val, 2),
-                'avg_rating': avg_r_val, 'review_count': rev_c_val })
-            if len(enriched_recs_list) >= FINAL_N_RECS:
-                break
-
-    app.logger.debug(f"PersonalRecommendations: User {user_id} - final recs count: {len(enriched_recs_list)}")
-    return jsonify(enriched_recs_list)
+    return jsonify(output), 200
 
 @app.route('/api/vehicles/<string:vehicle_id_target>/recommendations', methods=['GET'])
 def recommendations_by_vehicle_revised(vehicle_id_target):
