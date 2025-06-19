@@ -1295,6 +1295,24 @@ class Vehicle(db.Model):
     image_url         = db.Column(db.String(2048), nullable=True)
     reviews           = db.relationship('Review', backref='vehicle', lazy=True)
 
+    
+    def to_dict(self):
+        """Преобразует объект Vehicle в словарь для JSON-сериализации."""
+        return {
+            'vehicle_id': self.vehicle_id,
+            'brand': self.brand,
+            'model': self.model,
+            'body_type': self.body_type,
+            'year': self.year,
+            'gearbox': self.gearbox,
+            'drive': self.drive,
+            'power_hp': self.power_hp,
+            'seats': self.seats,
+            'price_per_day_usd': float(self.price_per_day_usd) if self.price_per_day_usd is not None else None,
+            'image_url': self.image_url
+        }
+   
+
 class CartItem(db.Model):
     __tablename__ = 'cart_items'
     id         = db.Column(db.Integer, primary_key=True)
