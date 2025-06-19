@@ -45,7 +45,7 @@ handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)
 app.logger.handlers = [handler]
 app.logger.info("Flask application logger configured.")
 
-# config
+# Конфигурация БД и JWT
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     'DATABASE_URL',
     'mysql+pymysql://root:PisyaMorja123@localhost/db_name'
@@ -53,7 +53,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.environ.get(
     'JWT_SECRET_KEY',
-    'your-super-secret-fallback-key-for-admin-panel'
+    'your-super-secret-fallback-key'
 )
 
 db.init_app(app)
