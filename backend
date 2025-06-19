@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import joblib
 import tensorflow as tf 
-from tensorflow.keras.models import load_model 
+from tensorflow.keras.models import load_model  
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS, cross_origin
@@ -27,6 +27,7 @@ from sqlalchemy import or_, func
 
 from database import db
 from models import Role, User, Vehicle, CartItem, Order, OrderItem, Review
+from recommendation_service import RecommenderService
 
 
 app = Flask(__name__)
