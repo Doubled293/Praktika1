@@ -1297,7 +1297,7 @@ class Vehicle(db.Model):
 
     
     def to_dict(self):
-        """Преобразует объект Vehicle в словарь для JSON-сериализации."""
+        # Преобразует объект Vehicle в словарь для JSON-сериализации
         return {
             'vehicle_id': self.vehicle_id,
             'brand': self.brand,
@@ -1358,203 +1358,418 @@ class Review(db.Model):
 
 import pandas as pd
 import numpy as np
-import pickle
+import joblib # Используем joblib
 from sqlalchemy import create_engine
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from surprise import Dataset, Reader, KNNBasic
 from collections import defaultdict
+import os
+import logging
 
-DB_USER = "root"
-DB_PASSWORD = "123"
-DB_HOST = "localhost"
-DB_PORT     = 3306
-DB_NAME = "db_name"
+# Настройка логгера
+script_logger = logging.getLogger(__name__)
+if not script_logger.handlers:
+    script_logger.setLevel(logging.INFO)
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    script_logger.addHandler(handler)
 
-USER_CF_MODEL_FILE = 'user_knn_model.pkl'
-CONTENT_MODEL_FILE = 'content_model.pkl'
-HYBRID_MODEL_FILE  = 'hybrid_model.pkl'
+DB_URL = os.environ.get(
+    'DATABASE_URL',
+    'mysql+pymysql://root:PisyaMorja123@localhost/db_name'
+)
 
-ALPHA       = 0.7
-K_NEIGHBORS = 40
-TOP_K       = 10
+# Пути для сохранения моделей
+BASE_MODEL_DIR = os.path.join(os.path.dirname(__file__), 'models')
+CLASSIC_MODELS_SUBDIR = 'classic_recs_artifacts_v2'
+ARTIFACTS_SAVE_PATH = os.path.join(BASE_MODEL_DIR, CLASSIC_MODELS_SUBDIR)
+os.makedirs(ARTIFACTS_SAVE_PATH, exist_ok=True)
+
+USER_CF_MODEL_FILE = os.path.join(ARTIFACTS_SAVE_PATH, 'user_knn_model.joblib')
+CONTENT_ARTIFACTS_FILE = os.path.join(ARTIFACTS_SAVE_PATH, 'content_artifacts.joblib')
+COMMON_ARTIFACTS_FILE = os.path.join(ARTIFACTS_SAVE_PATH, 'common_artifacts.joblib') # Файл для общих артефактов
+
+# Параметры моделей
+ALPHA_HYBRID = 0.7
+K_NEIGHBORS_CF = 20
+TOP_K_RECS = 10
 
 # Загрузка данных
 def load_data():
-    conn_str = (
-        f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}"
-        f"@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-    )
-    engine = create_engine(conn_str)
+    script_logger.info(f"Подключение к БД по URL: {DB_URL.replace(DB_URL.split('@')[0].split('//')[1].split(':')[1], '****') if '@' in DB_URL else DB_URL}") # Маскируем пароль в логе
+    engine = create_engine(DB_URL)
 
-    # истории заказов
-    df_orders = pd.read_sql(
-        """
-        SELECT
-          o.user_id,
-          oi.vehicle_id     AS car_id,
-          o.created_at      AS order_date
-        FROM orders AS o
-        JOIN order_items AS oi
-          ON o.id = oi.order_id;
-        """,
-        engine
-    )
+    try:
+        script_logger.info("Загрузка истории заказов")
+        df_orders = pd.read_sql(
+            """
+            SELECT
+              CAST(o.user_id AS CHAR) AS user_id,
+              CAST(oi.vehicle_id AS CHAR) AS vehicle_id,
+              o.created_at AS order_date
+            FROM orders AS o
+            JOIN order_items AS oi ON o.id = oi.order_id;
+            """,
+            engine
+        )
+        script_logger.info(f"Загружено {len(df_orders)} записей заказов.")
 
-    # отзывы
-    df_reviews = pd.read_sql(
-        "SELECT user_id, vehicle_id AS car_id, rating FROM reviews;",
-        engine
-    )
+        script_logger.info("Загрузка отзывов...")
+        df_reviews = pd.read_sql(
+            "SELECT CAST(user_id AS CHAR) AS user_id, CAST(vehicle_id AS CHAR) AS vehicle_id, rating FROM reviews;",
+            engine
+        )
+        script_logger.info(f"Загружено {len(df_reviews)} записей отзывов.")
 
-    # характеристики авто
-    df_cars = pd.read_sql(
-        """
-        SELECT
-          vehicle_id        AS car_id,
-          model,
-          drive             AS drive_type,
-          year,
-          power_hp,
-          seats
-        FROM vehicles;
-        """,
-        engine
-    )
+        script_logger.info("Загрузка характеристик автомобилей")
+        df_cars = pd.read_sql(
+            """
+            SELECT
+              CAST(vehicle_id AS CHAR) AS vehicle_id,
+              model,
+              body_type,
+              drive AS drive_type, -- Оставляем как есть, если вы это используете
+              year,
+              power_hp,
+              seats,
+              price_per_day_usd
+            FROM vehicles;
+            """,
+            engine
+        )
+        script_logger.info(f"Загружено {len(df_cars)} записей автомобилей.")
+        
+        # Проверка на пустые DataFrame
+        if df_orders.empty and df_reviews.empty and df_cars.empty:
+             script_logger.warning("Все загруженные DataFrame пусты.")
+        
+        return df_orders, df_reviews, df_cars
 
-    return df_orders, df_reviews, df_cars
+    except Exception as e:
+        script_logger.error(f"Ошибка при загрузке данных из БД: {e}", exc_info=True)
+        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
 
 # Предобработка
 def prepare_interactions(df_orders, df_reviews):
-    df = pd.merge(df_orders, df_reviews, on=['user_id','car_id'], how='left')
+    script_logger.info("Подготовка данных взаимодействий...")
+    if df_orders.empty and df_reviews.empty:
+        script_logger.error("df_orders и df_reviews пусты, подготовка невозможна.")
+        return pd.DataFrame()
+
+    # Если есть только отзывы, но нет заказов
+    if df_orders.empty and not df_reviews.empty:
+        script_logger.info("df_orders пуст, используем только df_reviews для взаимодействий.")
+        df_int = df_reviews.copy()
+        if 'created_at' in df_int.columns: 
+            df_int['order_date'] = pd.to_datetime(df_int['created_at'])
+            df_int.drop(columns=['created_at'], inplace=True, errors='ignore')
+        else:
+            df_int['order_date'] = pd.Timestamp.now()
+        script_logger.info(f"Сформирован df_int на основе df_reviews: {len(df_int)} записей.")
+        return df_int[['user_id', 'vehicle_id', 'rating', 'order_date']]
+
+    # Если есть заказы
+    df = pd.merge(df_orders, df_reviews, on=['user_id','vehicle_id'], how='left')
     df['rating'] = df['rating'].fillna(3.0)
     df['order_date'] = pd.to_datetime(df['order_date'])
     df.sort_values('order_date', inplace=True)
-    return df
+    script_logger.info(f"Сформирован df_int на основе слияния: {len(df)} записей.")
+    return df[['user_id', 'vehicle_id', 'rating', 'order_date']]
 
-def train_test_split(df_int):
+
+def split_train_test_chronological(df_int):
+    script_logger.info("Разделение данных на обучающую и тестовую выборки (хронологически)...")
+    if df_int.empty or 'user_id' not in df_int.columns:
+        script_logger.error("df_int пуст или не содержит 'user_id'. Разделение невозможно.")
+        return pd.DataFrame(), pd.DataFrame()
+
     train_list, test_list = [], []
     for uid, grp in df_int.groupby('user_id'):
-        recs = grp.to_dict('records')
+        recs = grp.sort_values('order_date').to_dict('records')
         if len(recs) <= 1:
-            test_list.extend(recs)
+            train_list.extend(recs)
         else:
-            *train_entries, test_entry = recs
-            train_list.extend(train_entries)
-            test_list.append(test_entry)
-    return pd.DataFrame(train_list), pd.DataFrame(test_list)
+            train_list.extend(recs[:-1])
+            test_list.append(recs[-1]) 
+    
+    df_train = pd.DataFrame(train_list)
+    df_test = pd.DataFrame(test_list)
+    script_logger.info(f"Данные разделены: df_train - {len(df_train)}, df_test - {len(df_test)} записей.")
+    return df_train, df_test
 
 
 # Построение моделей
 def build_cf_model(df_train):
+    script_logger.info("Обучение User-based CF модели (KNNBasic)...")
+    if df_train.empty or not all(col in df_train.columns for col in ['user_id', 'vehicle_id', 'rating']):
+        script_logger.error("df_train пуст или не содержит колонок user_id, vehicle_id, rating для CF.")
+        return None
+    if len(df_train['user_id'].unique()) < 2 or len(df_train['vehicle_id'].unique()) < 2 :
+        script_logger.error("Недостаточно уникальных пользователей или авто для обучения CF (нужно >= 2).")
+        return None
+
     reader   = Reader(rating_scale=(1,5))
-    data     = Dataset.load_from_df(df_train[['user_id','car_id','rating']], reader)
+    data     = Dataset.load_from_df(df_train[['user_id','vehicle_id','rating']], reader)
     trainset = data.build_full_trainset()
-    algo     = KNNBasic(k=K_NEIGHBORS, sim_options={'name':'cosine','user_based':True})
+    
+    actual_k = min(K_NEIGHBORS_CF, trainset.n_users - 1 if trainset.n_users > 1 else 0)
+    if actual_k <= 0:
+        script_logger.error(f"Невозможно обучить KNNBasic: k ({actual_k}) должно быть > 0. Мало пользователей в trainset ({trainset.n_users}).")
+        return None
+        
+    algo = KNNBasic(k=actual_k, sim_options={'name':'cosine','user_based':True})
     algo.fit(trainset)
+    script_logger.info(f"User-based CF модель обучена (k={actual_k}).")
     return algo
 
 def build_content_model(df_cars):
-    df_feat = df_cars.set_index('car_id')
-    features = ['model','drive_type','year','power_hp','seats']
-    df_feat = pd.get_dummies(df_feat[features], columns=['model','drive_type'], drop_first=False)
-    scaler  = MinMaxScaler()
-    df_feat[['year','power_hp','seats']] = scaler.fit_transform(df_feat[['year','power_hp','seats']])
-    X       = df_feat.values
-    sim     = cosine_similarity(X, X)
-    return df_feat, sim
+    script_logger.info("Подготовка данных для Content-based модели...")
+    if df_cars is None or df_cars.empty or 'vehicle_id' not in df_cars.columns:
+        script_logger.error("df_cars пуст или не содержит 'vehicle_id'. Content-based модель не будет построена.")
+        return pd.DataFrame(index=pd.Index([], name='vehicle_id')), None, None 
+
+    # Признаки, которые будем использовать
+    features_to_use = ['model','drive_type','year','power_hp','seats', 'body_type', 'price_per_day_usd']
+    available_features = [f for f in features_to_use if f in df_cars.columns]
+    
+    categorical_features = [f for f in ['model', 'drive_type', 'body_type'] if f in available_features]
+    numerical_features = [f for f in ['year', 'power_hp', 'seats', 'price_per_day_usd'] if f in available_features]
+
+    if not (categorical_features or numerical_features):
+        script_logger.error("Нет доступных категориальных или числовых признаков для Content-based модели.")
+        return df_cars.set_index('vehicle_id'), None, None
+
+    df_feat = df_cars.set_index('vehicle_id')
+    df_feat_processed = df_feat[available_features].copy()
+
+    # Заполнение пропусков
+    for col in categorical_features:
+        df_feat_processed[col] = df_feat_processed[col].fillna('Unknown').astype(str)
+    for col in numerical_features:
+        if df_feat_processed[col].notna().any():
+            df_feat_processed[col] = df_feat_processed[col].fillna(df_feat_processed[col].median())
+        else:
+            df_feat_processed[col] = df_feat_processed[col].fillna(0) 
+            script_logger.warning(f"Столбец '{col}' для контентной модели содержал только NaN, заполнен нулями.")
+    
+    transformers = []
+    if categorical_features:
+        transformers.append(('cat', OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical_features))
+    if numerical_features:
+        transformers.append(('num', MinMaxScaler(), numerical_features))
+    
+    if not transformers:
+        script_logger.error("Нет признаков для ColumnTransformer.")
+        return df_feat, None, None
+
+    preprocessor = ColumnTransformer(transformers=transformers, remainder='drop')
+    
+    try:
+        X_transformed = preprocessor.fit_transform(df_feat_processed)
+    except Exception as e:
+        script_logger.error(f"Ошибка при трансформации признаков для Content-based: {e}", exc_info=True)
+        return df_feat, None, preprocessor 
+
+    if X_transformed.shape[0] == 0:
+        script_logger.error("Матрица признаков X_transformed пуста после обработки.")
+        return df_feat, None, preprocessor
+
+    item_similarity_matrix = cosine_similarity(X_transformed)
+    script_logger.info(f"Матрица схожести для Content-based модели построена: {item_similarity_matrix.shape}")
+    return df_feat, item_similarity_matrix, preprocessor
+
 
 # История пользователей
 def build_user_history(df_train):
-    return df_train.groupby('user_id')['car_id'].apply(list).to_dict()
+    script_logger.info("Построение истории взаимодействий пользователей...")
+    if df_train.empty or not all(col in df_train.columns for col in ['user_id', 'vehicle_id']):
+        return {}
+    return df_train.groupby('user_id')['vehicle_id'].apply(list).to_dict()
 
 
 # Рекомендательные функции
-def recommend_content(user_id, df_feat, sim, history, top_n=TOP_K):
-    cars = df_feat.index.tolist()
-    seen = history.get(user_id, [])
-    if not seen:
+def recommend_content(user_id, df_feat_indexed, item_similarity_matrix, user_history_dict, top_n=TOP_K_RECS):
+    if df_feat_indexed is None or df_feat_indexed.empty or item_similarity_matrix is None:
         return []
-    idxs = [cars.index(c) for c in seen if c in cars]
-    scores = sim[:, idxs].mean(axis=1)
-    candidates = [(cars[i], scores[i]) for i in range(len(cars)) if cars[i] not in seen]
-    candidates.sort(key=lambda x: x[1], reverse=True)
-    return candidates[:top_n]
+    
+    all_vehicle_ids = df_feat_indexed.index.tolist()
+    seen_vehicle_ids = user_history_dict.get(str(user_id), []) 
+    
+    if not seen_vehicle_ids: return [] 
+    
+    valid_seen_indices = [all_vehicle_ids.index(vid) for vid in seen_vehicle_ids if vid in all_vehicle_ids]
+    if not valid_seen_indices: return []
 
-def recommend_hybrid(user_id, cf_algo, df_feat, sim, history,
-                     item_mean, popular, alpha=ALPHA, top_n=TOP_K):
-    cars = df_feat.index.tolist()
-    seen = set(history.get(user_id, []))
+    user_similarity_vector = item_similarity_matrix[:, valid_seen_indices].mean(axis=1)
+    
+    candidate_scores = []
+    for i, vehicle_id_cand in enumerate(all_vehicle_ids):
+        if vehicle_id_cand not in seen_vehicle_ids:
+            candidate_scores.append((vehicle_id_cand, user_similarity_vector[i]))
+            
+    candidate_scores.sort(key=lambda x: x[1], reverse=True)
+    return candidate_scores[:top_n]
 
-    cf_scores = {c: (cf_algo.predict(user_id, c).est if c not in seen else 0)
-                 for c in cars}
-    # content-based
+def recommend_hybrid(user_id, cf_algo, df_feat_indexed, item_similarity_matrix, user_history_dict,
+                     global_mean_rating_val, popular_items_list, alpha_val=ALPHA_HYBRID, top_n_val=TOP_K_RECS):
+    user_id_str = str(user_id)
+
+    if df_feat_indexed is None or df_feat_indexed.empty:
+        if cf_algo:
+            all_vehicle_ids_placeholder = list(set(item[0] for item_list in user_history_dict.values() for item in item_list)) 
+            seen_vehicle_ids = set(user_history_dict.get(user_id_str, []))
+            cf_scores_only = {vid: (cf_algo.predict(user_id, vid).est if vid not in seen_vehicle_ids else -1.0) 
+                              for vid in all_vehicle_ids_placeholder if vid}
+            ranked_cf = sorted(cf_scores_only.items(), key=lambda x: x[1], reverse=True)
+            return ranked_cf[:top_n_val]
+        return popular_items_list[:top_n_val]
+
+    all_vehicle_ids = df_feat_indexed.index.tolist()
+    seen_vehicle_ids = set(user_history_dict.get(user_id_str, []))
+
+    cf_scores = {}
+    if cf_algo:
+        cf_scores = {vid: (cf_algo.predict(user_id, vid).est if vid not in seen_vehicle_ids else -1.0) 
+                     for vid in all_vehicle_ids if vid}
+
     cb_scores = {}
-    if seen:
-        idxs = [cars.index(c) for c in seen if c in cars]
-        base = sim[:, idxs].mean(axis=1) if idxs else np.zeros(len(cars))
-        for i,c in enumerate(cars):
-            if c not in seen:
-                cb_scores[c] = base[i] * 5
-    else:
-        return popular[:top_n]
+    if item_similarity_matrix is not None and seen_vehicle_ids:
+        valid_seen_indices = [all_vehicle_ids.index(vid) for vid in seen_vehicle_ids if vid in all_vehicle_ids]
+        if valid_seen_indices:
+            user_similarity_vector = item_similarity_matrix[:, valid_seen_indices].mean(axis=1)
+            for i, vehicle_id_cand in enumerate(all_vehicle_ids):
+                if vehicle_id_cand not in seen_vehicle_ids and vehicle_id_cand:
+                    cb_scores[vehicle_id_cand] = user_similarity_vector[i] * 5.0 
+    
+    if not any(vid not in seen_vehicle_ids for vid in all_vehicle_ids if vid):
+        return popular_items_list[:top_n_val]
 
-    # hybrid
-    hybrid = {c: alpha*cf_scores.get(c,0) + (1-alpha)*cb_scores.get(c,0)
-              for c in cf_scores if c not in seen}
-    ranked = sorted(hybrid.items(), key=lambda x: x[1], reverse=True)
-    return ranked[:top_n]
+    hybrid_scores = {}
+    for vehicle_id_cand in all_vehicle_ids:
+        if vehicle_id_cand not in seen_vehicle_ids and vehicle_id_cand:
+            cf_s = cf_scores.get(vehicle_id_cand, global_mean_rating_val)
+            cb_s = cb_scores.get(vehicle_id_cand, global_mean_rating_val)
+            if pd.isna(cf_s): cf_s = global_mean_rating_val
+            if pd.isna(cb_s): cb_s = global_mean_rating_val
+            hybrid_scores[vehicle_id_cand] = alpha_val * cf_s + (1 - alpha_val) * cb_s
+
+    if not hybrid_scores: return popular_items_list[:top_n_val]
+    ranked_hybrid = sorted(hybrid_scores.items(), key=lambda x: x[1], reverse=True)
+    return ranked_hybrid[:top_n_val]
 
 # Оценка качества
-def evaluate(rec_func, df_test, history, name, top_n=TOP_K):
-    relevant = defaultdict(set)
-    for _,r in df_test.iterrows():
-        relevant[r['user_id']].add(r['car_id'])
+def evaluate_ranking(rec_func_to_eval, df_test_eval, user_history_dict_eval, model_name, top_n_eval=TOP_K_RECS):
+    if df_test_eval.empty:
+        script_logger.info(f"df_test пуст для модели {model_name}. Оценка невозможна.")
+        return
+        
+    relevant_items_per_user = defaultdict(set)
+    for _,row_data in df_test_eval.iterrows():
+        relevant_items_per_user[str(row_data['user_id'])].add(str(row_data['vehicle_id']))
 
-    ps, rs, aps = [],[],[]
-    for uid, trues in relevant.items():
-        recs = [c for c,_ in rec_func(uid)]
-        if not recs: continue
-        hits = sum(1 for c in recs if c in trues)
-        ps.append(hits/top_n)
-        rs.append(hits/len(trues))
-        cum, ap = 0,0
-        for i,c in enumerate(recs,1):
-            if c in trues:
-                cum += 1
-                ap += cum/i
-        aps.append(ap/len(trues))
+    precision_scores, recall_scores, map_scores = [], [], []
+    for user_id_eval, true_relevant_items in relevant_items_per_user.items():
+        try:
+            recommendations = [str(vid_rec) for vid_rec,_ in rec_func_to_eval(user_id_eval)]
+        except Exception as e_rec:
+            script_logger.error(f"Ошибка при генерации рек-ций для user {user_id_eval} в модели {model_name}: {e_rec}")
+            continue 
 
-    print(f"{name}: P@{top_n}={np.mean(ps):.3f}, "
-          f"R@{top_n}={np.mean(rs):.3f}, MAP@{top_n}={np.mean(aps):.3f}")
+        if not recommendations: continue
+        
+        hits = sum(1 for vid_rec in recommendations if vid_rec in true_relevant_items)
+        precision_scores.append(hits / top_n_eval if top_n_eval > 0 else 0)
+        recall_scores.append(hits / len(true_relevant_items) if true_relevant_items else 0)
+        
+        current_ap, cumulative_hits = 0.0, 0
+        for i, vid_rec in enumerate(recommendations, 1):
+            if vid_rec in true_relevant_items:
+                cumulative_hits += 1
+                current_ap += cumulative_hits / i
+        map_scores.append(current_ap / len(true_relevant_items) if true_relevant_items else 0.0)
+
+    if not precision_scores:
+        script_logger.warning(f"Для модели {model_name} не удалось рассчитать метрики (нет данных или ошибок в рекомендациях).")
+        return
+
+    script_logger.info(f"{model_name}: P@{top_n_eval}={np.mean(precision_scores):.3f}, "
+                       f"R@{top_n_eval}={np.mean(recall_scores):.3f}, MAP@{top_n_eval}={np.mean(map_scores):.3f}")
+
 
 # main
 def main():
+    script_logger.info("Начало процесса обучения классических моделей.")
     df_orders, df_reviews, df_cars = load_data()
-    df_int    = prepare_interactions(df_orders, df_reviews)
-    df_train, df_test = train_test_split(df_int)
 
-    cf_algo = build_cf_model(df_train)
-    feat, sim = build_content_model(df_cars)
-    history = build_user_history(df_train)
+    if df_cars is None: 
+        script_logger.error("Критическая ошибка: не удалось загрузить данные. Обучение прервано.")
+        return
 
-    item_mean = df_train.groupby('car_id')['rating'].mean().to_dict()
-    popular   = sorted(item_mean.items(), key=lambda x: x[1], reverse=True)
+    df_interactions = prepare_interactions(df_orders, df_reviews)
+    if df_interactions.empty:
+        script_logger.error("Нет данных для взаимодействий. Обучение прервано.")
+        return
 
-    evaluate(lambda u: recommend_hybrid(u, cf_algo, feat, sim, history, item_mean, popular),
-             df_test, history, "Hybrid")
-    evaluate(lambda u: recommend_content(u, feat, sim, history),
-             df_test, history, "Content-based")
-    evaluate(lambda u: recommend_hybrid(u, cf_algo, feat, sim, history, item_mean, popular, alpha=1.0),
-             df_test, history, "User-based CF")
+    df_train, df_test = split_train_test_chronological(df_interactions)
+    if df_train.empty:
+        script_logger.error("Обучающая выборка пуста. Обучение прервано.")
+        return
 
-    # сохраняем
-    with open(USER_CF_MODEL_FILE, 'wb')    as f: pickle.dump(cf_algo, f)
-    with open(CONTENT_MODEL_FILE, 'wb')    as f: pickle.dump({'features': feat, 'cars': feat.index.tolist()}, f)
-    with open(HYBRID_MODEL_FILE, 'wb')     as f: pickle.dump({'cf': cf_algo,'features':feat,'sim':sim,'alpha':ALPHA,'popular':popular}, f)
+    cf_algo_model = build_cf_model(df_train)
+    if cf_algo_model:
+        joblib.dump(cf_algo_model, USER_CF_MODEL_FILE)
+        script_logger.info(f"User-CF модель сохранена в {USER_CF_MODEL_FILE}")
 
-    print("Models saved.")
+    df_features_indexed, item_similarity, item_proc_pipeline = build_content_model(df_cars)
+    content_artifacts = {
+        'features_df_indexed': df_features_indexed, 
+        'item_similarity_matrix': item_similarity,
+        'item_processing_pipeline': item_proc_pipeline
+    }
+    if item_similarity is not None:
+        joblib.dump(content_artifacts, CONTENT_ARTIFACTS_FILE)
+        script_logger.info(f"Артефакты Content-based модели сохранены в {CONTENT_ARTIFACTS_FILE}")
+
+    user_interaction_history = build_user_history(df_train)
+    global_mean_val = df_train['rating'].mean() if not df_train.empty and 'rating' in df_train.columns else 3.0
+    
+    popular_items = []
+    if not df_train.empty and 'vehicle_id' in df_train.columns and 'rating' in df_train.columns:
+        item_mean_ratings_train = df_train.groupby('vehicle_id')['rating'].mean().to_dict()
+        popular_items = sorted(item_mean_ratings_train.items(), key=lambda x: x[1], reverse=True)
+    
+    common_artifacts_to_save = {
+        'user_history': user_interaction_history,
+        'global_mean_rating': global_mean_val,
+        'popular_items': popular_items,
+        'alpha_hybrid': ALPHA_HYBRID,
+        'min_rating_global': df_train['rating'].min() if not df_train.empty and 'rating' in df_train else 1.0,
+        'max_rating_global': df_train['rating'].max() if not df_train.empty and 'rating' in df_train else 5.0,
+    }
+    joblib.dump(common_artifacts_to_save, COMMON_ARTIFACTS_FILE)
+    script_logger.info(f"Общие артефакты для гибридной модели сохранены в {COMMON_ARTIFACTS_FILE}")
+
+    if not df_test.empty:
+        script_logger.info("\n--- Оценка моделей ---")
+        if cf_algo_model and item_similarity is not None and df_features_indexed is not None and not df_features_indexed.empty:
+             evaluate_ranking(lambda u_id: recommend_hybrid(u_id, cf_algo_model, df_features_indexed, item_similarity, user_interaction_history, global_mean_val, popular_items),
+                              df_test, user_interaction_history, "Hybrid")
+        
+        if item_similarity is not None and df_features_indexed is not None and not df_features_indexed.empty:
+            evaluate_ranking(lambda u_id: recommend_content(u_id, df_features_indexed, item_similarity, user_interaction_history),
+                             df_test, user_interaction_history, "Content-based")
+        
+        if cf_algo_model: 
+            evaluate_ranking(lambda u_id: recommend_hybrid(u_id, cf_algo_model, df_features_indexed, item_similarity, user_interaction_history, global_mean_val, popular_items, alpha_val=1.0),
+                             df_test, user_interaction_history, "User-based CF (via Hybrid alpha=1.0)")
+    else:
+        script_logger.info("Тестовая выборка пуста, оценка моделей пропускается.")
+
+    script_logger.info("Процесс обучения классических моделей завершен.")
 
 if __name__ == '__main__':
     main()
