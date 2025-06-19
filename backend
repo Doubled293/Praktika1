@@ -1774,6 +1774,344 @@ def main():
 if __name__ == '__main__':
     main()
 
+### `backend\recommendation_service.py`
+
+```python
+import os
+import json
+import logging
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+from tensorflow.keras import layers
+from sqlalchemy import create_engine, text
+import joblib
+
+# Определение логгера
+service_logger = logging.getLogger(__name__)
+if not service_logger.handlers:
+    service_logger.setLevel(logging.INFO)
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    service_logger.addHandler(handler)
+
+# Определение кастомного класса модели для загрузки
+@tf.keras.utils.register_keras_serializable()
+class RatingClassificationModel(tf.keras.Model):
+    def __init__(self, user_lookup, item_lookup, norm_layers,
+                 embedding_dim=64, hidden_units=[128, 64],
+                 dropout_rate=0.5, num_classes=5, **kwargs):
+        super().__init__(**kwargs)
+        self.user_lookup = user_lookup
+        self.item_lookup = item_lookup
+        self.norm_layers = norm_layers
+
+        self.user_emb = layers.Embedding(
+            user_lookup.vocabulary_size() + 1,
+            embedding_dim,
+            name="user_embedding"
+        )
+        self.item_emb = layers.Embedding(
+            item_lookup.vocabulary_size() + 1,
+            embedding_dim,
+            name="item_embedding"
+        )
+        self.concat = layers.Concatenate(name="concat_embeddings")
+
+        self.dense_blocks = []
+        if hidden_units:
+            self.dense_blocks.append(
+                layers.Dropout(dropout_rate, name="dropout_input")
+            )
+        for i, units in enumerate(hidden_units):
+            self.dense_blocks += [
+                layers.Dense(units, name=f"dense_{i}"),
+                layers.BatchNormalization(name=f"bn_{i}"),
+                layers.Activation('relu', name=f"act_{i}"),
+                layers.Dropout(dropout_rate, name=f"dropout_{i}")
+            ]
+        self.out = layers.Dense(num_classes, activation='softmax', name="output")
+
+    def call(self, inputs, training=False):
+        u_idx = self.user_lookup(inputs['user_id'])
+        i_idx = self.item_lookup(inputs['item_id'])
+        u_vec = self.user_emb(u_idx)
+        i_vec = self.item_emb(i_idx)
+
+        norm_feats = []
+        for name, layer in self.norm_layers.items():
+            x = inputs[name]
+            if x.shape.rank == 1:
+                x = tf.expand_dims(x, axis=-1)
+            norm_feats.append(layer(x))
+
+        x = self.concat([u_vec, i_vec] + norm_feats)
+        for layer in self.dense_blocks:
+            if isinstance(layer, (layers.Dropout, layers.BatchNormalization)):
+                x = layer(x, training=training)
+            else:
+                x = layer(x)
+        return self.out(x)
+
+    def get_config(self):
+        cfg = super().get_config()
+        cfg.update({
+            'user_lookup':   tf.keras.layers.serialize(self.user_lookup),
+            'item_lookup':   tf.keras.layers.serialize(self.item_lookup),
+            'norm_layers':   {n: tf.keras.layers.serialize(l) for n, l in self.norm_layers.items()},
+            'embedding_dim': self.user_emb.output_dim,
+            'hidden_units':  [block.units for block in self.dense_blocks if isinstance(block, layers.Dense)],
+            'dropout_rate':  self.dense_blocks[0].rate if self.dense_blocks else 0.5,
+            'num_classes':   self.out.units,
+        })
+        return cfg
+
+    @classmethod
+    def from_config(cls, config):
+        config['user_lookup'] = tf.keras.layers.deserialize(config['user_lookup'])
+        config['item_lookup'] = tf.keras.layers.deserialize(config['item_lookup'])
+        config['norm_layers'] = {
+            n: tf.keras.layers.deserialize(lcfg)
+            for n, lcfg in config['norm_layers'].items()
+        }
+        return cls(**config)
+
+
+class RecommenderService:
+    def __init__(self, tf_model_load_dir, classic_artifacts_load_dir, db_url):
+        self.tf_model_load_dir = tf_model_load_dir
+        self.classic_artifacts_load_dir = classic_artifacts_load_dir
+        self.db_url = db_url
+        self.engine = create_engine(db_url)
+
+        self.all_vehicle_ids_cache = None
+        self.tf_model = None
+        self.tf_global_average_rating = 3.0
+        self.num_classes_param = 5
+
+        self.user_knn_classic = None
+        self.content_features_df_indexed = None
+        self.content_item_similarity_matrix = None
+
+        self.common_user_history = {}
+        self.common_global_mean_rating = 3.0
+        self.common_popular_items = []
+        self.common_alpha_hybrid = 0.7
+
+        self._load_tf_artifacts()
+        self._load_classic_artifacts()
+        self._get_all_vehicle_ids()
+
+    def _load_tf_artifacts(self):
+        service_logger.info(f"Загрузка артефактов TF модели из файла: {self.tf_model_load_dir}")
+        if not self.tf_model_load_dir or not os.path.isfile(self.tf_model_load_dir):
+            service_logger.error(f"TF-файл модели не найден: {self.tf_model_load_dir}.")
+            return
+        try:
+            custom_objects = {'RatingClassificationModel': RatingClassificationModel}
+            self.tf_model = tf.keras.models.load_model(
+                self.tf_model_load_dir,
+                custom_objects=custom_objects,
+                compile=False
+            )
+            avg_path = self.tf_model_load_dir.replace(".keras", "_global_avg.json")
+            if os.path.exists(avg_path):
+                with open(avg_path, 'r', encoding='utf-8') as f:
+                    self.tf_global_average_rating = json.load(f).get('global_average_rating', 3.0)
+
+            try:
+                self.num_classes_param = self.tf_model.get_layer('output').units
+                service_logger.info(f"Количество классов в модели: {self.num_classes_param}")
+            except ValueError:
+                service_logger.warning("Слой 'output' не найден → num_classes=5 по умолчанию.")
+                self.num_classes_param = 5
+
+            service_logger.info("TF модель и артефакты успешно загружены.")
+        except Exception as e:
+            service_logger.error(f"Ошибка TF загрузки: {e}", exc_info=True)
+            self.tf_model = None
+
+    def _load_classic_artifacts(self):
+        service_logger.info(f"Загрузка классических артефактов из: {self.classic_artifacts_load_dir}")
+        if not os.path.isdir(self.classic_artifacts_load_dir):
+            service_logger.warning(f"Директория не найдена: {self.classic_artifacts_load_dir}")
+            return
+        try:
+            ucf = os.path.join(self.classic_artifacts_load_dir, 'user_knn_model.joblib')
+            ccf = os.path.join(self.classic_artifacts_load_dir, 'content_artifacts.joblib')
+            comf = os.path.join(self.classic_artifacts_load_dir, 'common_artifacts.joblib')
+
+            if os.path.exists(ucf):
+                self.user_knn_classic = joblib.load(ucf)
+            else:
+                service_logger.warning(f"User-CF файл не найден: {ucf}")
+
+            if os.path.exists(ccf):
+                art = joblib.load(ccf)
+                self.content_features_df_indexed    = art.get('features_df_indexed')
+                self.content_item_similarity_matrix = art.get('item_similarity_matrix')
+            else:
+                service_logger.warning(f"Content-CF файл не найден: {ccf}")
+
+            if os.path.exists(comf):
+                com = joblib.load(comf)
+                self.common_user_history       = com.get('user_history', {})
+                self.common_global_mean_rating = com.get('global_mean_rating', 3.0)
+                raw_pop = com.get('popular_items', [])
+                self.common_popular_items = [vid for vid, _ in raw_pop]
+                self.common_alpha_hybrid = com.get('alpha_hybrid', 0.7)
+            else:
+                service_logger.warning(f"Common-артефакты не найдены: {comf}")
+
+            service_logger.info("Классические артефакты загружены.")
+        except Exception as e:
+            service_logger.error(f"Ошибка classic загрузки: {e}", exc_info=True)
+
+    def _get_all_vehicle_ids(self):
+        if self.all_vehicle_ids_cache is None:
+            service_logger.info("Кэширование всех vehicle_id из БД…")
+            try:
+                with self.engine.connect() as conn:
+                    res = conn.execute(text("SELECT CAST(vehicle_id AS CHAR) FROM vehicles;"))
+                    self.all_vehicle_ids_cache = [r[0] for r in res]
+            except Exception as e:
+                service_logger.error(f"Ошибка загрузки ID автомобилей: {e}")
+                self.all_vehicle_ids_cache = []
+        return self.all_vehicle_ids_cache
+
+    def _get_fresh_user_history(self, user_id):
+        seen = set()
+        sql_r = "SELECT DISTINCT vehicle_id FROM reviews WHERE user_id = :uid"
+        sql_o = "SELECT DISTINCT oi.vehicle_id FROM orders o JOIN order_items oi ON o.id=oi.order_id WHERE o.user_id=:uid"
+        try:
+            with self.engine.connect() as conn:
+                for r in conn.execute(text(sql_r), {"uid": user_id}):
+                    seen.add(r[0])
+                for r in conn.execute(text(sql_o), {"uid": user_id}):
+                    seen.add(r[0])
+            service_logger.info(f"Найдено {len(seen)} взаимодействий для user {user_id}")
+        except Exception as e:
+            service_logger.error(f"Ошибка истории user {user_id}: {e}")
+        return seen
+
+    def _get_current_user_features(self, uid_str):
+        sql = "SELECT COALESCE(AVG(rating), :g) AS user_avg, COUNT(rating) AS user_count FROM reviews WHERE user_id=:uid"
+        try:
+            with self.engine.connect() as conn:
+                row = conn.execute(text(sql), {"g": self.tf_global_average_rating, "uid": uid_str}).fetchone()
+            return {'user_avg_rating': float(row.user_avg), 'user_rating_count': int(row.user_count)}
+        except:
+            return {'user_avg_rating': self.tf_global_average_rating, 'user_rating_count': 0}
+
+    def _get_current_vehicle_features_batch(self, vids):
+        if not vids:
+            return pd.DataFrame(columns=['vehicle_id','item_avg_rating','item_rating_count'])
+        sql = ("SELECT CAST(v.vehicle_id AS CHAR) AS vehicle_id, "
+               "COALESCE(AVG(r.rating), :g) AS item_avg_rating, "
+               "COUNT(r.id) AS item_rating_count "
+               "FROM vehicles v "
+               "LEFT JOIN reviews r ON v.vehicle_id=r.vehicle_id "
+               "WHERE v.vehicle_id IN :vids "
+               "GROUP BY v.vehicle_id")
+        try:
+            with self.engine.connect() as conn:
+                proxy = conn.execute(text(sql), {"g": self.tf_global_average_rating, "vids": tuple(vids)})
+                df = pd.DataFrame(proxy.fetchall(), columns=proxy.keys())
+            base = pd.DataFrame({'vehicle_id': [str(v) for v in vids]})
+            merged = pd.merge(base, df, on='vehicle_id', how='left')
+            merged['item_avg_rating'] = merged['item_avg_rating'].fillna(self.tf_global_average_rating).astype(float)
+            merged['item_rating_count'] = merged['item_rating_count'].fillna(0).astype(int)
+            return merged
+        except Exception as e:
+            service_logger.error(f"Ошибка фичей авто: {e}")
+            return pd.DataFrame(columns=['vehicle_id','item_avg_rating','item_rating_count'])
+
+    def _get_user_taste_vector(self, seen_vids):
+        try:
+            emb_layer    = self.tf_model.get_layer('item_embedding')
+            lookup_layer = self.tf_model.get_layer('item_lookup')
+            emb_dim      = emb_layer.output_dim
+        except Exception as e:
+            service_logger.error(f"Эмбеддинги не найдены: {e}")
+            return np.zeros((1, 64), dtype=np.float32)
+
+        if not seen_vids:
+            return np.zeros((1, emb_dim), dtype=np.float32)
+
+        weights = emb_layer.get_weights()[0]
+        indices = lookup_layer(list(seen_vids))
+        valid   = tf.gather(indices, tf.where(indices != 0))
+        if tf.shape(valid)[0] == 0:
+            return np.zeros((1, emb_dim), dtype=np.float32)
+
+        user_embs = tf.nn.embedding_lookup(weights, valid)
+        mean      = tf.reduce_mean(user_embs, axis=0)
+        return tf.expand_dims(mean, axis=0).numpy()
+
+    def get_hybrid_recommendations(self, user_id, num_recommendations=10):
+        service_logger.info(f"Запрос гибридных рекомендаций для user_id: {user_id}")
+        if not self.tf_model:
+            return []
+
+        seen = self._get_fresh_user_history(user_id)
+        if not seen:
+            service_logger.info(f"User {user_id} has no history → fallback to popular items")
+            return self.common_popular_items[:num_recommendations]
+
+        all_ids    = self._get_all_vehicle_ids()
+        candidates = [vid for vid in all_ids if vid not in seen]
+        if not candidates:
+            return []
+
+        taste_vec  = self._get_user_taste_vector(seen)
+        user_feats = self._get_current_user_features(str(user_id))
+        item_df    = self._get_current_vehicle_features_batch(candidates)
+        n          = len(candidates)
+
+        try:
+            tv     = np.squeeze(taste_vec)
+            tv_rep = np.tile(tv, (n, 1))
+            model_input = {
+                'user_id':    tf.constant([str(user_id)] * n, dtype=tf.string),
+                'item_id':    tf.constant(item_df['vehicle_id'].values, dtype=tf.string),
+                'user_avg':   tf.constant([user_feats['user_avg_rating']] * n, dtype=tf.float32),
+                'user_count': tf.constant([user_feats['user_rating_count']] * n, dtype=tf.float32),
+                'item_avg':   tf.constant(item_df['item_avg_rating'].values, dtype=tf.float32),
+                'item_count': tf.constant(item_df['item_rating_count'].values, dtype=tf.float32),
+                'user_taste_vector': tf.constant(tv_rep, dtype=tf.float32)
+            }
+            preds = self.tf_model(model_input, training=False)
+            rv     = tf.constant(np.arange(1, self.num_classes_param + 1), dtype=tf.float32)
+            matrix = tf.reshape(rv, (self.num_classes_param, 1))
+            exp    = tf.squeeze(tf.matmul(preds, matrix), axis=1).numpy()
+            scores = dict(zip(candidates, exp))
+            ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+            return [vid for vid, _ in ranked[:num_recommendations]]
+
+        except Exception as e:
+            service_logger.error(f"Ошибка предсказания: {e}", exc_info=True)
+            return []
+
+    def get_content_similar_vehicles(self, target_vehicle_id, num_recommendations=5):
+        service_logger.info(f"Похожие авто для vehicle_id: {target_vehicle_id}")
+        if self.content_item_similarity_matrix is None or self.content_features_df_indexed is None:
+            service_logger.warning("Content-артефакты не загружены.")
+            return []
+        vid = str(target_vehicle_id)
+        if vid not in self.content_features_df_indexed.index:
+            service_logger.warning(f"Авто {vid} нет в контентном индексе.")
+            return []
+        try:
+            idx = self.content_features_df_indexed.index.get_loc(vid)
+            sims= self.content_item_similarity_matrix[idx]
+            top= np.argsort(-sims)[1:num_recommendations+1]
+            return self.content_features_df_indexed.index[top].tolist()
+        except Exception as e:
+            service_logger.error(f"Ошибка похожих авто: {e}", exc_info=True)
+            return []
+
+```
+
 ### `backend\Recommendations.ipynb`
 
 import numpy as np
