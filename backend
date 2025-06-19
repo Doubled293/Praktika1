@@ -326,17 +326,7 @@ def get_vehicles():
      .group_by(Vehicle.vehicle_id).all()
 
     result = [{
-        'vehicle_id': v.vehicle_id,
-        'brand': v.brand,
-        'model': v.model,
-        'body_type': v.body_type,
-        'year': v.year,
-        'gearbox': v.gearbox,
-        'drive': v.drive,
-        'power_hp': v.power_hp,
-        'seats': v.seats,
-        'price_per_day_usd': float(v.price_per_day_usd),
-        'image_url': v.image_url,
+        **v.to_dict(),
         'avg_rating': float(avg_rating) if avg_rating is not None else None,
         'review_count': review_count
     } for v, avg_rating, review_count in vehicles_query]
