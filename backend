@@ -1033,7 +1033,6 @@ from database import db
 from models import User, Role, Order, OrderItem, Review, Vehicle
 from app import app
 
-
 # Настройка логирования для скрипта
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -1054,7 +1053,7 @@ REVIEWS_CSV_PATH    = os.path.join(BASE_DIR, 'data', 'reviews.csv')
 VEHICLES_CSV_PATH   = os.path.join(BASE_DIR, 'data', 'project_vehicle_dataset.csv')
 
 def load_vehicles():
-    """Загружает автомобили из CSV, если таблица пуста."""
+    # Загружает автомобили из CSV, если таблица пуста.
     if Vehicle.query.first():
         logger.info("Vehicles table is not empty, skipping CSV load for vehicles.")
         return
@@ -1106,8 +1105,7 @@ def load_vehicles():
         logger.info("No vehicles loaded (table empty or all rows invalid).")
 
 def load_users_and_roles():
-    """Создаёт роли и загружает пользователей из CSV, если таблица пуста.
-       Гарантирует, что хотя бы один админ есть всегда."""
+    # Создаёт роли и загружает пользователей из CSV, если таблица пуста.
     user_role  = Role.query.filter_by(name='user').first()
     admin_role = Role.query.filter_by(name='admin').first()
     if not user_role:
@@ -1165,7 +1163,7 @@ def load_users_and_roles():
         logger.info("✔ Default admin user created: login=admin, password=admin.")
 
 def load_reviews_and_orders():
-    """Загружает отзывы из CSV и создаёт для каждого отзыв фейковый заказ."""
+    # Загружает отзывы из CSV и создаёт для каждого отзыв
     if Review.query.first():
         logger.info("Reviews table is not empty, skipping CSV load for reviews.")
         return
