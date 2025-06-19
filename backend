@@ -648,6 +648,30 @@ def recommendations_personal():
 
     return jsonify(output), 200
 
+@app.route('/api/recommendations/hybrid/<int:user_id>', methods=['GET'])
+@jwt_required()
+def get_hybrid_personal_recommendations(user_id):
+    #  Персональные гибридные рекомендации на основе нейросети. 
+    current_user_id = get_current_user_id()
+    if current_user_id != user_id:
+        return jsonify(msg="Forbidden: You can only request your own recommendations."), 403
+            
+    if recommender_service is None:
+         return jsonify(msg="Recommender service is not available."), 503
+
+    try:
+        recommended_ids = recommender_service.get_hybrid_recommendations(user_id=user_id, num_recommendations=10)
+        if not recommended_ids:
+            return jsonify([])
+
+        vehicles = Vehicle.query.filter(Vehicle.vehicle_id.in_(recommended_ids)).all()
+        vehicle_map = {str(v.vehicle_id): v.to_dict() for v in vehicles}
+        sorted_vehicles_data = [vehicle_map[vid] for vid in recommended_ids if vid in vehicle_map]
+        return jsonify(sorted_vehicles_data)
+    except Exception as e:
+        app.logger.error(f"Hybrid recommendations failed for user {user_id}: {e}", exc_info=True)
+        return jsonify(msg="Internal server error"), 500
+
 @app.route('/api/vehicles/<string:vehicle_id_target>/recommendations', methods=['GET'])
 def recommendations_by_vehicle_revised(vehicle_id_target):
     app.logger.debug(f"SimilarVehicles: Request for target_id: {vehicle_id_target}")
