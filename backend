@@ -1358,7 +1358,7 @@ class Review(db.Model):
 
 import pandas as pd
 import numpy as np
-import joblib # Используем joblib
+import joblib
 from sqlalchemy import create_engine
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
@@ -2109,6 +2109,241 @@ class RecommenderService:
         except Exception as e:
             service_logger.error(f"Ошибка похожих авто: {e}", exc_info=True)
             return []
+
+```
+
+### `backend\recommender.py`
+
+```python
+import os
+import json
+import logging
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+logging.getLogger('tensorflow').setLevel(logging.ERROR)
+
+from tensorflow.keras import layers, optimizers
+from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping
+from sklearn.model_selection import train_test_split
+from sklearn.utils.class_weight import compute_class_weight
+from sqlalchemy import create_engine
+
+DB_URL = os.environ.get('DATABASE_URL', 'mysql+pymysql://root:PisyaMorja123@localhost/db_name')
+
+app_logger = logging.getLogger(__name__)
+if not app_logger.handlers:
+    app_logger.setLevel(logging.INFO)
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    app_logger.addHandler(handler)
+
+
+def load_and_split_ratings_with_features(test_size=0.2, random_state=42):
+    engine = create_engine(DB_URL)
+    try:
+        df = pd.read_sql("SELECT user_id, vehicle_id, rating FROM reviews;", engine)
+        app_logger.info(f"Загружено {len(df)} записей из таблицы reviews.")
+    except Exception as e:
+        app_logger.error(f"Ошибка подключения к БД или получению данных: {e}")
+        return None, None, None
+
+    if df.empty:
+        app_logger.warning("Таблица reviews пуста — нечему учиться.")
+        return None, None, None
+
+    df = df.astype({'user_id': str, 'vehicle_id': str, 'rating': int})
+
+    counts = df['rating'].value_counts()
+    can_stratify = all(counts[r] >= 2 for r in counts.index)
+    strat = df['rating'] if can_stratify else None
+    if not can_stratify:
+        app_logger.warning("Недостаточно примеров для всех классов — stratify отключён.")
+
+    train_df, test_df = train_test_split(
+        df, test_size=test_size, random_state=random_state, stratify=strat
+    )
+    app_logger.info(f"Данные разделены: train={len(train_df)}, test={len(test_df)}.")
+
+    global_avg = train_df['rating'].mean() or 3.0
+
+    user_agg = train_df.groupby('user_id')['rating'].agg(['mean', 'count']).reset_index()
+    user_agg.columns = ['user_id', 'user_avg', 'user_count']
+    item_agg = train_df.groupby('vehicle_id')['rating'].agg(['mean', 'count']).reset_index()
+    item_agg.columns = ['vehicle_id', 'item_avg', 'item_count']
+
+    train_df = train_df.merge(user_agg, on='user_id', how='left').merge(item_agg, on='vehicle_id', how='left')
+    test_df  = test_df .merge(user_agg, on='user_id', how='left').merge(item_agg, on='vehicle_id', how='left')
+
+    for col in ['user_avg', 'item_avg']:
+        train_df[col] = train_df[col].fillna(global_avg)
+        test_df[col]  = test_df[col].fillna(global_avg)
+    for col in ['user_count', 'item_count']:
+        train_df[col] = train_df[col].fillna(0)
+        test_df[col]  = test_df[col].fillna(0)
+
+    app_logger.info("Инжиниринг признаков завершён.")
+    return train_df, test_df, float(global_avg)
+
+
+@tf.keras.utils.register_keras_serializable()
+class RatingClassificationModel(tf.keras.Model):
+    def __init__(self, user_lookup, item_lookup, norm_layers,
+                 embedding_dim=64, hidden_units=[128, 64],
+                 dropout_rate=0.5, num_classes=5, **kwargs):
+        super().__init__(**kwargs)
+        self.user_lookup = user_lookup
+        self.item_lookup = item_lookup
+        self.norm_layers = norm_layers
+
+        self.user_emb = layers.Embedding(user_lookup.vocabulary_size() + 1, embedding_dim, name="user_embedding")
+        self.item_emb = layers.Embedding(item_lookup.vocabulary_size() + 1, embedding_dim, name="item_embedding")
+        self.concat   = layers.Concatenate(name="concat_embeddings")
+
+        self.dense_blocks = []
+        if hidden_units:
+            self.dense_blocks.append(layers.Dropout(dropout_rate, name="dropout_input"))
+        for i, units in enumerate(hidden_units):
+            self.dense_blocks += [
+                layers.Dense(units, name=f"dense_{i}"),
+                layers.BatchNormalization(name=f"bn_{i}"),
+                layers.Activation('relu', name=f"act_{i}"),
+                layers.Dropout(dropout_rate, name=f"dropout_{i}")
+            ]
+        self.out = layers.Dense(num_classes, activation='softmax', name="output")
+
+    def call(self, inputs, training=False):
+        u_idx = self.user_lookup(inputs['user_id'])
+        i_idx = self.item_lookup(inputs['item_id'])
+        u_vec = self.user_emb(u_idx)
+        i_vec = self.item_emb(i_idx)
+
+        norm_feats = []
+        for name, layer in self.norm_layers.items():
+            x = inputs[name]
+            if x.shape.rank == 1:
+                x = tf.expand_dims(x, -1)
+            norm_feats.append(layer(x))
+
+        x = self.concat([u_vec, i_vec] + norm_feats)
+        for layer in self.dense_blocks:
+            if isinstance(layer, (layers.Dropout, layers.BatchNormalization)):
+                x = layer(x, training=training)
+            else:
+                x = layer(x)
+        return self.out(x)
+
+    def get_config(self):
+        cfg = super().get_config()
+        cfg.update({
+            'user_lookup':   tf.keras.layers.serialize(self.user_lookup),
+            'item_lookup':   tf.keras.layers.serialize(self.item_lookup),
+            'norm_layers':   {n: tf.keras.layers.serialize(l) for n, l in self.norm_layers.items()},
+            'embedding_dim': self.user_emb.output_dim,
+            'hidden_units':  [block.units for block in self.dense_blocks if isinstance(block, layers.Dense)],
+            'dropout_rate':  self.dense_blocks[0].rate if self.dense_blocks else 0.5,
+            'num_classes':   self.out.units
+        })
+        return cfg
+
+    @classmethod
+    def from_config(cls, config):
+        config['user_lookup'] = tf.keras.layers.deserialize(config['user_lookup'])
+        config['item_lookup'] = tf.keras.layers.deserialize(config['item_lookup'])
+        config['norm_layers'] = {
+            n: tf.keras.layers.deserialize(lcfg)
+            for n, lcfg in config['norm_layers'].items()
+        }
+        return cls(**config)
+
+
+def train_and_save(epochs=150, batch_size=128, model_version_name="tf_recs_model_v15"):
+    app_logger.info(f"Запуск обучения модели: {model_version_name}")
+
+    train_df, test_df, global_avg = load_and_split_ratings_with_features()
+    if train_df is None:
+        return
+
+    num_feats = ['user_avg', 'user_count', 'item_avg', 'item_count']
+    all_users = sorted(set(train_df['user_id']) | set(test_df['user_id']))
+    all_items = sorted(set(train_df['vehicle_id']) | set(test_df['vehicle_id']))
+
+    user_lookup = layers.StringLookup(vocabulary=all_users, mask_token=None, name="user_lookup")
+    item_lookup = layers.StringLookup(vocabulary=all_items, mask_token=None, name="item_lookup")
+
+    norm_layers = {}
+    for feat in num_feats:
+        nl = layers.Normalization(axis=None, name=f"norm_{feat}")
+        nl.adapt(train_df[feat].to_numpy())
+        norm_layers[feat] = nl
+
+    def df_to_dataset(df, shuffle):
+        x = {
+            'user_id': df['user_id'].to_numpy(),
+            'item_id': df['vehicle_id'].to_numpy()
+        }
+        for feat in num_feats:
+            x[feat] = df[feat].to_numpy().astype(np.float32)
+        y = tf.one_hot(df['rating'] - 1, depth=5)
+        ds = tf.data.Dataset.from_tensor_slices((x, y))
+        if shuffle:
+            ds = ds.shuffle(len(df))
+        return ds.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+
+    train_ds = df_to_dataset(train_df, True)
+    val_ds   = df_to_dataset(test_df,  False)
+
+    model = RatingClassificationModel(
+        user_lookup=user_lookup,
+        item_lookup=item_lookup,
+        norm_layers=norm_layers,
+        embedding_dim=64,
+        hidden_units=[128, 64],
+        dropout_rate=0.5,
+        num_classes=5
+    )
+
+    model.compile(
+        optimizer=optimizers.Adam(learning_rate=3e-4),
+        loss='categorical_crossentropy',
+        metrics=['accuracy']
+    )
+
+    weights = compute_class_weight('balanced',
+                                   classes=np.unique(train_df['rating']),
+                                   y=train_df['rating'])
+    class_weights = {i: w for i, w in enumerate(weights)}
+
+    callbacks = [
+        ReduceLROnPlateau(monitor='val_loss', factor=0.3, patience=7, min_lr=5e-8, verbose=1),
+        EarlyStopping(monitor='val_loss', patience=25, restore_best_weights=True, verbose=1)
+    ]
+
+    model.fit(
+        train_ds,
+        validation_data=val_ds,
+        epochs=epochs,
+        class_weight=class_weights,
+        callbacks=callbacks,
+        verbose=1
+    )
+
+    save_dir = Path(__file__).parent / "models"
+    save_dir.mkdir(exist_ok=True)
+    keras_path = save_dir / f"{model_version_name}.keras"
+    model.save(str(keras_path))
+    with open(save_dir / f"{model_version_name}_global_avg.json", 'w', encoding='utf-8') as f:
+        json.dump({'global_average_rating': global_avg}, f, ensure_ascii=False, indent=4)
+
+    app_logger.info("Модель и артефакты сохранены.")
+    
+
+if __name__ == '__main__':
+    train_and_save()
 
 ```
 
