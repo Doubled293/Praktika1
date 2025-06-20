@@ -1,0 +1,451 @@
+vehicle_id,brand,model,body_type,year,gearbox,drive,power_hp,seats,price_per_day_usd,image
+745eb271-c470-49fd-b1d1-494c01fa8034,toyota,camry solara,Compact,2008,Manual,FWD,620,2,127.98,http://images.thecarconnection.com/lrg/2008-toyota-camry-solara-convertible_100182606_l.jpg
+5546fe1e-8629-4ee0-bf63-793d2b71e149,toyota,corolla,Compact,1993,Automatic,FWD,430,5,175.36,http://momentcar.com/images/1993-corolla-1.jpg
+22bb3b0f-8df7-426d-a2a5-fb0ee3a3e6f1,toyota,prius v,Midsize station wagon,2017,Automatic,FWD,336,3,30.76,https://images.hgmsites.net/hug/2017-toyota-prius-v_100557995_h.jpg
+9baf2474-3fd9-42d5-8c6c-901865ee39a7,toyota,gr 86,Minicompact,2023,Automatic,RWD,278,6,278.18,https://www.carpixel.net/w/a75a29621a27570c3df7002410df5a9e/toyota-gr-86-special-edition-wallpaper-hd-109002.jpg
+34433d7a-2b42-4f2b-bd5c-79fa0ce36a54,toyota,mr2,Two seater,2005,Manual,RWD,672,5,38.3,https://blog.consumerguide.com/wp-content/uploads/sites/2/2019/04/Screen-Shot-2019-04-04-at-12.19.42-PM-1110x577.png
+8455596e-554c-401b-899d-7e459b27959b,toyota,corolla,Compact,2022,Automatic,FWD,626,5,153.7,https://www.carpixel.net/w/96a9a723733dba92a1c32f955baa088c/toyota-corolla-hybrid-sedan-wallpaper-hd-108992.jpg
+d026b12d-687d-4333-bcf5-dedb6e4d60f4,toyota,mr2,Two seater,2004,Manual,RWD,254,7,138.37,http://momentcar.com/images/toyota-mr2-spyder-2004-1.jpg
+92e95327-8140-4dd1-ad93-0c6133ef1a68,toyota,yaris,Subcompact,2007,Automatic,FWD,296,8,129.13,https://media.ed.edmunds-media.com/toyota/yaris/2007/oem/2007_toyota_yaris_sedan_s_fq_oem_4_815.jpg
+150663dd-e705-41aa-8613-871a1a5c1bce,toyota,celica convertible,Minicompact,1998,Automatic,FWD,350,5,62.31,https://cdn1.mecum.com/auctions/fl0121/fl0121-442429/images/0-5-1608675760240@2x.jpg?1609695327000
+081d0df9-76b3-43b1-b21a-d0d52bc300b7,toyota,gr supra,Two seater,2021,Automatic,RWD,386,2,163.51,https://www.hdcarwallpapers.com/walls/2021_toyota_gr_supra_2_2-HD.jpg
+4af4ea4c-555e-4b17-b2b8-bce5da1ec8e2,toyota,celica convertible,Minicompact,1997,Automatic,FWD,443,5,203.49,http://static.cargurus.com/images/site/2012/10/24/14/45/1997_toyota_celica_gt_convertible-pic-2205002652387694142.jpeg
+1b87ccb7-f1d5-44e8-9697-3c6ccbd5aac7,toyota,mr2,Two seater,2002,Manual,RWD,193,8,275.06,http://momentcar.com/images/toyota-mr2-spyder-2002-7.jpg
+64f84c12-435a-4c39-b90b-cf26b6194026,toyota,yaris,Compact,2014,Manual,FWD,465,6,140.88,https://www.drivearabia.com/app/uploads/2013/10/2014-Toyota-Yaris-Sedan-1.jpg
+d93b0101-5c1f-49eb-8bcd-816aa0ffc331,toyota,mr2,Two seater,1992,Manual,RWD,662,4,32.41,https://cdn.dealeraccelerate.com/international/1/562/27290/1920x1440/1992-toyota-mr2
+b2c77650-67e1-4ce8-9a75-c1eb130067bc,toyota,mr2,Two seater,2001,Manual,RWD,149,7,178.22,https://www.pcarmarket.com/static/media/uploads/galleries/photos/uploads/galleries/v-0019849-tab-kahn-collector-cars-chicago-630-802-4654-2001-toyota-mr2-spyder/.thumbnails/A-04.jpg/A-04-tiny-2048x0-0.5x0.jpg
+87d7af40-cc19-4bbf-8bf9-5ee85615f5ed,toyota,celica convertible,Minicompact,1996,Automatic,FWD,645,2,45.98,https://images.classic.com/vehicles/3b18d52224d1645922b41077ee47b3bcee7d341c.jpg?auto=format&fit=crop&ar=16:9&w=4742
+1157b7fe-dffc-49cd-b508-d1e03813eb81,toyota,celica convertible,Minicompact,1999,Automatic,FWD,627,5,94.11,http://x-img.autorevo.com/1999-toyota-celica-concord-ca-5977623/1600x1600/1509081-41-large.jpg
+46d7f131-c797-4b52-a02d-983623a76d4a,toyota,yaris,Compact,2015,Automatic,FWD,483,3,202.59,https://media.ed.edmunds-media.com/toyota/yaris/2015/oem/2015_toyota_yaris_2dr-hatchback_l_fq_oem_3_1280.jpg
+5bc66ec4-5543-4c23-a40b-e0490f3d34c5,toyota,mr2,Two seater,2000,Manual,FWD,89,4,28.63,https://c8.alamy.com/comp/2JAEWPX/2000-yellow-toyota-mr2-vvti-1794cc-petrol-2dr-hardtop-two-seater-sports-car-2JAEWPX.jpg
+cc57fbc9-8b97-41c5-8ce4-934498631646,toyota,corolla,Compact,2009,Manual,FWD,592,2,299.14,http://static.cargurus.com/images/site/2007/10/31/17/51/2009_toyota_corolla_xrs-pic-19049.jpeg
+b779fc6a-fe67-4056-bf62-e8ff045aa46b,toyota,mr2,Two seater,1995,Manual,RWD,268,8,123.61,https://s1.cdn.autoevolution.com/images/news/gallery/1995-toyota-mr2-turbo-goes-on-auction-could-be-more-expensive-than-a-new-gt86_7.jpg
+0d6fa55d-e9c9-42b7-8e91-a2c02bef8e81,toyota,camry solara,Compact,2006,Manual,FWD,461,5,248.34,https://static0.topspeedimages.com/wordpress/wp-content/uploads/jpg/200608/2006-toyota-camry-solara-37.jpg
+bc88d0c9-7a84-4b67-9ae0-86679239062c,toyota,camry,Midsize,2011,Manual,FWD,639,5,150.58,http://images.thecarconnection.com/lrg/2011-toyota-camry-4-door-sedan-v6-auto-le-natl-angular-front-exterior-view_100311926_l.jpg
+45adc94b-0ddf-42d1-bc8a-3c43e31ea580,toyota,yaris,Compact,2012,Automatic,FWD,688,6,117.35,https://media.ed.edmunds-media.com/toyota/yaris/2012/oem/2012_toyota_yaris_sedan_fleet_fq_oem_1_815.jpg
+ffa15436-a391-4342-ac94-e97e744c81f8,toyota,gr supra,Two seater,2024,Automatic,RWD,120,6,22.63,https://cimg2.ibsrv.net/ibimg/hgm/1920x1080-1/100/889/2024-toyota-supra-45th-anniversary-edition_100889290.jpg
+35851cea-ed6a-477c-a415-142223dbfcda,toyota,mr2,Two seater,1991,Manual,RWD,383,4,54.6,"https://bringatrailer.com/wp-content/uploads/2020/02/1991_toyota_mr2_15833600901fb71c976a628c372f1991_toyota_mr2_1583219944cd208497320fbe7-f67f-4383-8994-95dae7267599-Hb01XE.jpg?fit=940,626"
+44d17366-746b-4f7a-8f1b-886a5e2bc9a4,toyota,avalon,Midsize,2019,Automatic,FWD,663,3,116.51,http://2017releasedates.com/wp-content/gallery/2019-toyota-avalon/2019-Toyota-Avalon3.jpg
+eaaa58fe-ab24-496e-a53f-0c395f71bcb3,toyota,corolla,Compact,2010,Automatic,FWD,692,6,69.5,https://st.motortrend.com/uploads/sites/10/2015/11/2010-toyota-corolla-4-speed-at-sedan-angular-front.png
+65f01b79-f743-43e0-9850-532e5a93671a,toyota,yaris,Compact,2016,Automatic,FWD,152,5,199.13,http://images.hgmsites.net/hug/2016-toyota-yaris_100529990_h.jpg
+1e99c1ef-e0fe-43e5-b46b-55e37f514e01,toyota,corolla,Compact,2020,Automatic,FWD,205,6,248.81,https://img.autotrader.co.za/7434790
+8bb02f7b-dea7-4960-93aa-0a624070a10c,honda,insight,Midsize,2020,Automatic,FWD,371,2,244.85,https://www.rentonreporter.com/wp-content/uploads/2021/01/24002927_web1_carreview-insight-allKC-210129-blah_1.jpg
+e39bde1e-64e5-4be9-9a2d-d3e7d680fa7b,honda,insight,Two seater,2000,Manual,FWD,230,8,169.56,"https://hips.hearstapps.com/amv-prod-cad-assets.s3.amazonaws.com/images/02q2/267341/2000-honda-insight-photo-6248-s-original.jpg?crop=1xw:1xh;center,center&resize=900:*"
+8f4e49aa-1dc9-49e9-8ef6-f75d48791714,honda,civic,Subcompact,1992,Automatic,FWD,208,8,241.09,https://cdn.dealeraccelerate.com/international/1/337/18845/1920x1440/1992-honda-civic-sir-ii
+013ae30e-f9e8-4198-b498-8da66cd39fad,honda,hr-v awd,Small station wagon,2024,Automatic,AWD,85,5,253.26,http://www.clickheretesting.com/TeamHonda/research/2024/hrv/images/mlp-img-ext.jpg
+3faef352-e1a8-48eb-b208-a57e044acfe8,honda,insight,Two seater,2003,Automatic,FWD,259,7,51.29,http://momentcar.com/images/honda-insight-2003-8.jpg
+9c77a167-a74c-4d29-93b3-76781e1e3ec6,honda,odyssey,Minivan,2022,Automatic,FWD,661,8,198.0,https://hips.hearstapps.com/hmg-prod/images/2022-honda-odyssey-mmp-1-1610751865.jpg
+a0428948-6ac4-42c7-9ba7-792c130ee994,honda,hr-v 2wd,Small sport utility vehicle,2016,Manual,FWD,223,7,216.27,https://images.hgmsites.net/med/2016-honda-hr-v-2wd-4-door-cvt-ex-l-w-navi-angular-front-exterior-view_100542920_m.jpg
+ca0facde-1601-4124-8271-ce7d852da44e,honda,pilot 2wd,Sport utility vehicle,2011,Automatic,FWD,549,3,59.03,https://invimg2.autofunds.net/InventoryImages/2024/05/28/3699_2416214_67910857_581628082024.jpg
+44740ad9-452e-45ee-bbea-fb836829dac7,honda,fit,Small station wagon,2015,Automatic,FWD,405,7,292.73,https://images.hgmsites.net/hug/2015-honda-fit_100462018_h.jpg
+810459a2-8022-4f67-928f-31b52f130c5f,honda,civic del sol,Two seater,1995,Automatic,FWD,391,3,51.9,http://static.cargurus.com/images/site/2009/01/19/16/17/1995_honda_civic_del_sol_2_dr_vtec_coupe-pic-6450.jpeg
+ec92c119-8455-47cc-8b2b-55bb5cedd987,honda,insight,Compact,2013,Automatic,FWD,135,5,39.5,https://images.hgmsites.net/hug/2013-honda-insight_100405526_h.jpg
+28b604a7-fbaf-4cb3-a1b9-4bd2a764d132,honda,ridgeline truck 4wd,Standard pickup truck,2008,Automatic,AWD,698,6,150.23,https://i.gaw.to/vehicles/photos/00/08/000842_2008_Honda_Ridgeline.jpg?1024x640
+160aa30b-9547-4c73-8e3b-3e6ab6093176,honda,pilot fwd,Small sport utility vehicle,2025,Automatic,FWD,510,7,196.17,https://autoimage.capitalone.com/cms/Auto/assets/images/3104-hero-2025-honda-pilot-black-edition.jpg
+a22dfdff-718c-4693-a5c7-bea68e6170b9,honda,civic del sol,Two seater,1994,Automatic,FWD,600,3,52.33,"https://media.carsandbids.com/cdn-cgi/image/width=2080,quality=70/da4b9237bacccdf19c0760cab7aec4a8359010b0/photos/NinXsLo6gr2-2.IDbHbZU70.jpg?t=160340620809"
+5712d8cd-9d12-4703-80a6-96132a83cc22,honda,odyssey,Minivan,2018,Automatic,FWD,370,3,120.58,https://s1.cdn.autoevolution.com/images/gallery/HONDA-Odyssey-6026_15.jpg
+3112ed1e-b828-4e62-b01a-f6a43113e36d,honda,insight,Two seater,2002,Automatic,FWD,497,5,298.22,https://momentcar.com/images/honda-insight-2002-6.jpg
+f5e0e683-4e84-435e-a7bf-711ee46eb7bb,honda,insight,Two seater,2005,Automatic,FWD,273,7,261.59,https://images.hgmsites.net/med/2005-honda-insight-cvt-with-a-c-angular-front-exterior-view_100262345_m.jpg
+d02e7f27-fbab-46b4-bb56-538394d17324,honda,civic,Compact,2012,Automatic,FWD,372,6,205.4,https://images.hgmsites.net/hug/2012-honda-civic-sedan-4-door-auto-lx-angular-front-exterior-view_100352166_h.jpg
+8c5a95fc-3302-4f7d-b1cf-4b10d4824ddc,honda,del sol,Two seater,1997,Automatic,FWD,474,5,116.44,http://static.cargurus.com/images/site/2007/12/09/23/34/1997_honda_civic_del_sol_2_dr_s_coupe-pic-64370.jpeg
+408152a2-56ea-4209-90ef-f7a320ed971a,honda,civic,Subcompact,1999,Automatic,FWD,95,6,179.56,http://static.cargurus.com/images/site/2010/06/06/11/19/1999_honda_civic-pic-3271611073213329075.jpeg
+3589bd2e-df69-4d0b-aafd-240df0b23435,honda,accord plug-in hybrid,Midsize,2014,Automatic,FWD,180,3,210.23,https://www.autotrader.com/wp-content/uploads/2020/02/218415.jpg?w=1024&h=1&crop=1
+cdb073ae-1c35-4587-9690-a8467b8e7af5,honda,insight,Two seater,2004,Automatic,FWD,547,5,180.88,https://images.hgmsites.net/med/2004-honda-insight-3dr-hb-cvt-w-air-cond-angular-rear-exterior-view_100296458_m.jpg
+a040fd97-d50e-442a-8c74-ad2b98ac5704,honda,insight,Two seater,2006,Automatic,FWD,299,5,66.28,https://media.ed.edmunds-media.com/honda/insight/2006/oem/2006_honda_insight_2dr-hatchback_base_fq_oem_2_500.jpg
+1085fb98-fc5e-4a06-b884-bf67087fe68d,honda,accord wagon,Small station wagon,1993,Automatic,FWD,655,2,223.62,http://classiccardb.com/uploads/postfotos/1993-honda-accord-lx-wagon-45k-miles-4.jpg
+b8f354f6-9bf4-4b74-a3f5-591077cca44c,honda,ridgeline fwd,Small pickup truck,2017,Automatic,FWD,168,4,167.86,https://www.cartalk.com/sites/default/files/Honda+Ridgeline+2.JPG
+e5731498-8e9d-4ccb-80b2-434b15823f54,honda,insight,Two seater,2001,Automatic,FWD,569,8,94.86,https://preview.redd.it/2001-honda-insight-official-car-of-v0-s0ppaesgg2v91.jpg?width=1080&crop=smart&auto=webp&s=3121460835aeebe4708a65e4322b091ce035b31f
+d05bd9f4-6b29-43b0-b367-1abdb316bc8b,honda,civic,Subcompact,1998,Automatic,FWD,372,4,30.07,http://static.cargurus.com/images/site/2010/06/02/23/27/1998_honda_civic_4_dr_lx_sedan-pic-5805229955496057718.jpeg
+522ad27d-4485-4475-8c91-00ec2d0f4a27,honda,insight,Compact,2010,Automatic,FWD,222,8,199.1,https://static.carfromjapan.com/wp-content/uploads/2018/07/honda-insight-01.jpg
+c5c53688-d7bb-4e0f-a1a5-b1edc4c78033,honda,fit,Small station wagon,2007,Automatic,FWD,470,6,220.76,https://www.carsinvasion.com/gallery/2007-honda-fit-sport/2007-honda-fit-sport-04.jpg
+a294de4d-dea5-4b9a-84a5-517954601243,honda,insight touring,Compact,2021,Automatic,FWD,482,6,63.1,https://d197b26b2705960af6c6-0e720bb546f93220bfe130b29c81af43.ssl.cf1.rackcdn.com/19XZE4F94ME001431/873f0d5b5374653a2ceebda14bed6426.jpg
+abb16599-fa2e-4740-b483-80466a72c2ba,ford,mustang,Subcompact,2014,Manual,RWD,650,4,24.04,https://cdn.dealeraccelerate.com/adrenalin/1/1497/40561/1920x1440/2014-ford-mustang-gt-w-11-000-in-upgrades
+d339f4e7-7cf6-4d23-b6a1-dbe680af116b,ford,taurus fwd ffv,Large,2015,Automatic,FWD,610,7,80.88,https://picolio.auto123.com/15photo/ford/2015-ford-taurus-se-fwd_1.png
+5ca7ae89-b9f5-4b1d-8237-07664857c034,ford,aspire,Subcompact,1996,Manual,FWD,145,8,161.26,http://momentcar.com/images/ford-aspire-1996-1.jpg
+7d6dd6c5-9d2f-4f98-8c4f-16e14ea91dff,ford,thunderbird,Two seater,2003,Automatic,RWD,324,4,160.33,https://cdn.dealeraccelerate.com/cam/34/2506/121982/1920x1440/2003-ford-thunderbird-convertible
+63c3f0b3-18ef-4563-99a8-c88e4fe27e81,ford,f150 pickup 2wd,Standard pickup truck,2023,Automatic,RWD,507,2,50.74,https://lp-auto-assets.s3.amazonaws.com/23/ford/f-150/M3/header.jpg
+f55fa159-5937-4db5-99a1-bfc123dae58a,ford,aspire,Subcompact,1994,Automatic,FWD,399,3,278.42,https://consumerguide.com/wp-content/uploads/2014/07/94113341991312.jpg
+e25071ef-aa4c-41f2-868b-4baee604b639,ford,thunderbird,Two seater,2002,Automatic,RWD,323,6,233.46,https://cdn.dealeraccelerate.com/mutual/1/464/12241/1920x1440/2002-ford-thunderbird
+50f89442-79ef-4186-8a9f-f15162abb1ed,ford,taurus,Midsize,1993,Automatic,FWD,509,5,68.51,https://i1.wp.com/www.curbsideclassic.com/wp-content/uploads/2015/12/Taurus-front-promo.jpg
+059eeff3-2d5e-4247-a547-b0844b46b84f,ford,escape fwd,Small sport utility vehicle,2017,Automatic,FWD,230,2,54.53,http://www.car-revs-daily.com/wp-content/uploads/2017/01/DSCN4383.jpg
+2c533ac8-519c-4e50-aebc-46ee44bd784f,ford,thunderbird,Two seater,2004,Automatic,RWD,90,5,263.09,https://cdn.dealeraccelerate.com/cmc/1/741/56611/1920x1440/2004-ford-thunderbird-convertible
+566a36cb-2f56-4d5c-bd87-b5010ca46661,ford,taurus awd,Large,2008,Automatic,AWD,581,2,243.88,http://images.gtcarlot.com/pictures/62901990.jpg
+38b26bca-6d68-4fe9-9c94-bf7a1dc6dbf1,ford,escort zx2,Subcompact,1998,Automatic,FWD,410,5,69.88,https://i0.wp.com/www.curbsideclassic.com/wp-content/uploads/2014/01/Escort-1.jpg
+170b8fc5-7b75-403f-a3e8-7e23b932c6ab,ford,mustang,Subcompact,2012,Automatic,RWD,539,5,151.87,http://www.hdcarwallpapers.com/walls/blue_2012_ford_mustang_boss-wide.jpg
+9ec5113f-30e4-46ea-9afd-a5284b82360a,ford,mustang,Subcompact,2006,Automatic,RWD,107,2,132.6,https://cdn.dealeraccelerate.com/showdown/1/447/21345/1920x1440/2006-ford-mustang-gt
+bccc0934-6782-442c-983c-d238b0b53065,ford,flex fwd,Sport utility vehicle,2009,Automatic,FWD,612,4,98.76,http://pictures.topspeed.com/IMG/crop/200809/2009-ford-flex-sel-fwd_1600x0w.jpg
+3967b7ea-7470-4401-9ea4-b66bd5303f08,ford,ecosport fwd,Small sport utility vehicle,2021,Automatic,FWD,603,4,176.99,https://images.carprices.com/pricebooks_data/usa/colorized/2021/Ford/View2/EcoSport/Titanium/S2K_CJ.png
+eadb2931-f4e0-4270-a23b-52b56d7e8a00,ford,flex fwd,Standard sport utility vehicle,2019,Automatic,FWD,536,6,198.51,https://d2ivfcfbdvj3sm.cloudfront.net/7fc965ab77efe6e0fa62e4ca1ea7673bb2594354081e3d8e88cb/stills_0640_png/MY2019/13253/13253_st0640_116.png
+b60e06db-96e7-42e9-8e0e-1896eab4783d,ford,gt,Two seater,2005,Manual,RWD,696,7,127.47,https://cdn.dealeraccelerate.com/stlouis/1/1072/8403/1920x1440/2005-ford-gt
+1c93f787-01f7-4cef-8d4b-148a2551150e,ford,mustang performance package,Subcompact,2024,Automatic,RWD,123,2,21.62,https://www.essentialford.com/blogs/3694/wp-content/uploads/2023/12/Review-Roundup-2024-Ford-Mustang-GT-Performance-Package-Post.jpg
+142f2c55-bcb3-4d6d-96f4-1ab0dd33c73f,ford,fusion fwd,Midsize,2016,Automatic,FWD,257,6,241.01,https://c8613ffc47de5a7ac1c2-8d437f3e546f7cb38d35f6aebee24677.ssl.cf1.rackcdn.com/3FA6P0K99GR362183/ef2a784046a256b32dfff4b2eecc7c4e.jpg
+9d7f59d2-8a59-491f-9317-991519ff64bd,ford,transit connect van 2wd,Special purpose vehicle,2020,Automatic,FWD,101,5,281.18,https://images.dealer.com/ddc/vehicles/2020/Ford/Transit+Connect/Van/perspective/front-left/0020_24.png
+845c9606-8f50-4cbb-9995-895f16a007bd,ford,focus,Compact,2007,Automatic,FWD,589,8,44.36,http://momentcar.com/images/2007-focus-1.jpg
+2a3b35ff-f06a-4d29-9923-da613488beb7,ford,mustang,Subcompact,2010,Automatic,RWD,127,6,209.94,https://images.hgmsites.net/lrg/ford_100170109_l.jpg
+11c37df7-b990-4a97-aef3-533c41d75156,ford,escort zx2,Subcompact,1999,Automatic,FWD,476,3,206.78,http://images.gtcarlot.com/pictures/6921955.jpg
+1fa2dd36-9b86-4c2b-9619-c386f167541b,ford,transit connect van fwd,Special purpose vehicle,2022,Automatic,FWD,503,6,249.3,https://images.carprices.com/pricebooks_data/usa/colorized/2022/Ford/View2/Transit_Connect/XL/S7S_UM.png
+864daf55-6391-4b79-a088-3fe237ec05a0,ford,explorer fwd,Standard sport utility vehicle,2013,Automatic,FWD,136,2,20.69,http://images.thecarconnection.com/lrg/2013-ford-explorer-fwd-4-door-xlt-angular-front-exterior-view_100383768_l.jpg
+5d43f854-4d56-46e7-99fa-f53965c6c505,ford,transit connect van ffv,Special purpose vehicle,2018,Automatic,FWD,308,7,154.25,https://9e59a6be9d5449310956-e1f1a2f001d94011e35e09c0b10e271b.ssl.cf1.rackcdn.com/NM0LS7E78J1340740/3029b52e40b49b0caa5a7abbda5347be.jpg
+c3111f4d-b2ea-4ea4-96d8-426e3161afa7,ford,aspire,Subcompact,1997,Automatic,FWD,465,4,68.09,http://cdcssl.ibsrv.net/autodata/images/?IMG=U7FOGEL1.JPG&WIDTH=700
+0ea632ee-9c2f-4bb7-b82c-7dd112df9486,ford,festiva,Subcompact,1992,Automatic,FWD,603,6,227.62,http://momentcar.com/images/1992-festiva-2.jpg
+14761439-b788-45d1-ab70-7952c9f4e2b8,ford,escort zx2,Subcompact,2001,Automatic,FWD,466,7,237.33,http://www.skunkriverrestorations.com/wp-content/uploads/2015/08/YY1A5026-1024x683.jpeg
+ff16a8f7-fb7e-471a-b1f8-99b9baa099ba,chevrolet,colorado 2wd,Small pickup truck,2011,Automatic,RWD,534,8,276.37,https://imagescdn.dealercarsearch.com/Media/2268/20254575/638258102453019632.jpg
+ebb69ea6-da35-4868-a061-8902b5672c9e,chevrolet,camaro,Compact,2010,Manual,RWD,214,6,53.65,http://www.carbodydesign.com/archive/2008/07/24-chevrolet-camaro/Chevrolet-Camaro-2-lg.jpg
+f226c9a4-21ac-47b7-a950-0fbe965b2c8b,chevrolet,k1500 pickup 4wd,Standard pickup truck,1991,Manual,AWD,679,8,89.1,"https://bringatrailer.com/wp-content/uploads/2021/10/1991_chevrolet_silverado-1500_1991_chevrolet_silverado-1500_f5ed7649-14ab-4556-8b21-dd5d33bd0e07-ztDOfK-scaled.jpg?fit=940,627"
+b9524ab1-6151-41ac-be66-4f6fba141249,chevrolet,corvette,Two seater,2005,Automatic,RWD,114,5,267.37,https://www.supercars.net/blog/wp-content/uploads/2016/04/2005chevycorvette-l-c6ce1e41b961b09f.jpg
+8f040df0-f0a0-4a80-9c5d-dde2beb5c1b7,chevrolet,colorado 2wd,Small pickup truck,2012,Automatic,RWD,575,8,281.51,http://images.thecarconnection.com/lrg/2012-chevrolet-colorado-2wd-crew-cab-lt-w-2lt-angular-front-exterior-view_100366160_l.jpg
+6b2e78a3-b2d3-4f25-9dd3-e978c491c279,chevrolet,impala limited,Large,2016,Automatic,FWD,695,7,154.85,https://autos.hamariweb.com/images/carimages/AA_BBB56Cz.jpg
+25a2a27a-09b5-46d5-a8f4-aaa943b1774a,chevrolet,corvette,Two seater,2002,Automatic,RWD,350,5,77.75,https://www.corvsport.com/wp-content/uploads/2020/10/2002-chevrolet-corvette-1536x1152.jpg
+ea43091a-08d0-44d4-84dd-169b9b1b846f,chevrolet,trax fwd,Small sport utility vehicle,2022,Automatic,FWD,603,4,280.53,https://images.carprices.com/pricebooks_data/usa/colorized/2022/Chevrolet/View2/Trax/LT/1JV76_G5J.png
+fcc55bae-a6d5-4895-a53f-4775e8c56597,chevrolet,corvette,Two seater,1995,Manual,RWD,355,5,230.18,https://cdn.dealeraccelerate.com/stlouis/1/69/5925/1920x1440/1995-chevrolet-corvette-zr1
+c79333db-4d45-4f00-8f3a-c0dc7705d202,chevrolet,corvette,Two seater,1999,Automatic,RWD,88,5,81.07,https://cdn.dealeraccelerate.com/cam/34/2020/87226/1920x1440/1999-chevrolet-corvette-convertible
+b814020f-e88d-45d3-8545-1b5b958840a0,chevrolet,trax,Small station wagon,2025,Automatic,FWD,286,6,207.99,https://www.carscoops.com/wp-content/uploads/2022/10/2024-chevrolet-trax-activ-055-1536x832.jpg
+81680ea5-5dfe-43a6-b1d1-f342f52d0ba1,chevrolet,impala,Large,2008,Automatic,FWD,84,4,110.34,https://static0.topspeedimages.com/wordpress/wp-content/uploads/jpg/200712/2008-chevrolet-impala-50t-28.jpg
+a39a5a60-7995-4779-929e-846536e79177,chevrolet,trax,Small station wagon,2024,Automatic,FWD,679,2,272.68,https://www.carscoops.com/wp-content/uploads/2022/10/2024-chevrolet-trax-activ-Open.jpg
+3a5ea359-6b4e-426b-be0b-aa75996dc620,chevrolet,malibu,Midsize,2020,Automatic,FWD,157,5,43.52,https://img.lotlinx.com/vdn/37867/make_model_0_1G1ZD5STXLF007516_37867_1930030023.jpg
+7af7b9db-a4a2-45fe-968d-3d6f4ba6f8fd,chevrolet,c1500 pickup 2wd,Standard pickup truck,1992,Manual,RWD,104,8,83.4,https://cdn.dealeraccelerate.com/ab/1/1021/41931/790x1024/1992-chevrolet-c1500
+83976a80-d7b5-4740-98e9-fb1e18aea60d,chevrolet,corvette,Two seater,2019,Manual,RWD,697,4,168.29,https://st.automobilemag.com/uploads/sites/11/2018/04/2019-Chevrolet-Corvette-ZR1-110.jpg
+44e0f0ea-e38e-482b-9b2d-f42b7c16cbca,chevrolet,corvette,Two seater,2023,Automatic,RWD,145,5,45.72,https://media.ed.edmunds-media.com/chevrolet/corvette/2023/oem/2023_chevrolet_corvette_convertible_stingray_fq_oem_1_1280.jpg
+2da91c0d-e405-46da-b0a3-e1ba60b7d605,chevrolet,malibu eassist,Midsize,2013,Automatic,FWD,387,5,46.72,https://s.car.info/image_files/1920/0-832434.jpg
+9af1cb25-c30e-44d9-9491-3a56effcfdbc,chevrolet,corvette,Two seater,2009,Automatic,RWD,526,2,151.17,http://momentcar.com/images/chevrolet-corvette-2009-2.jpg
+3854c3e7-34e2-49a7-b6d9-9fd8d05fdcc4,chevrolet,corvette,Two seater,2001,Automatic,RWD,245,4,53.41,https://www.corvsport.com/wp-content/uploads/2020/10/2001-chevrolet-corvette.jpg
+2a57c4c7-540c-43ad-9d61-572704654104,chevrolet,corvette,Two seater,1996,Automatic,RWD,566,2,240.38,https://cdn.dealeraccelerate.com/ab/1/1327/57620/1920x1440/1996-chevrolet-corvette
+f3f5d0d4-e160-41bc-988a-aebf4bf1e31f,chevrolet,corvette,Two seater,1998,Automatic,RWD,535,7,254.95,https://cdn.dealeraccelerate.com/ab/1/1268/54251/1920x1440/1998-chevrolet-corvette
+8f7b48db-08d8-4897-8a92-3dc6c261e422,chevrolet,trailblazer awd,Small sport utility vehicle,2021,Automatic,AWD,617,4,255.3,https://www.automotiveaddicts.com/wp-content/uploads/2020/09/2021-chevrolet-trailblazer-awd-rs-3.jpg
+6220fdbf-79e0-4089-9001-574a48a203e8,chevrolet,lumina,Midsize,1993,Automatic,FWD,186,4,227.87,https://cdn.dealeraccelerate.com/primo/1/319/18570/1920x1440/1993-chevrolet-lumina-z34
+68386f43-4d7b-41cf-8d12-33eadb00e4cc,chevrolet,equinox fwd,Small sport utility vehicle,2018,Automatic,FWD,659,5,57.95,https://img.remediosdigitales.com/9d4fa1/chevrolet-equinox-2018_/1366_2000.jpg
+97adca7b-e04d-4648-b0a1-18d94f323b59,chevrolet,cobalt,Subcompact,2007,Automatic,FWD,304,7,62.24,http://momentcar.com/images/2007-cobalt-1.jpg
+969beba7-6378-4199-bf51-0a7ad406c7d2,chevrolet,corvette,Two seater,2006,Manual,RWD,155,5,48.45,https://cdn.dealeraccelerate.com/pjs/1/570/16624/1920x1440/2006-chevrolet-corvette
+56519941-e9fd-4ce2-a947-4dd2ef911fff,chevrolet,volt,Compact,2017,Automatic,FWD,96,4,239.02,https://media.ed.edmunds-media.com/chevrolet/volt/2017/oem/2017_chevrolet_volt_4dr-hatchback_premier_fq_oem_1_1600.jpg
+cae8a3bf-0d11-4ace-ac16-e034a2e10176,chevrolet,corvette,Two seater,2003,Automatic,RWD,622,3,205.73,https://cdn.dealeraccelerate.com/ab/1/455/12838/1920x1440/2003-chevrolet-corvette
+f5b66b72-ef54-44a5-aa01-f3a5273c3f2e,chevrolet,corvette,Two seater,1994,Manual,RWD,354,5,113.08,https://dealeraccelerate-all.s3.amazonaws.com/fastlane/images/2/0/6/4/2064/65454_467476b0t71ogrs12.jpg
+e9e51bb6-c71a-4d4e-9820-0d2e23be8d13,bmw,z3 roadster,Two seater,1996,Automatic,RWD,444,7,147.23,https://s1.cdn.autoevolution.com/images/gallery/BMWZ3-1414_9.jpg
+e120d717-7be8-4323-b1e4-5ae6abe2c632,bmw,m3,Subcompact,1991,Manual,RWD,513,5,241.29,https://cdn.dealeraccelerate.com/farland/1/171/6263/1920x1440/1991-bmw-m3
+8b24defa-94a9-4c76-afef-91333acffd33,bmw,z3 roadster,Two seater,1997,Automatic,RWD,359,5,199.17,https://assets.dyler.com/uploads/cars/6453/357892/large_bmw-z3-roadster-1-8-cabriolet-roadster-1997-silver-for-sale.jpg
+33d51f74-9e27-451a-96b0-4253959f6d4c,bmw,m coupe,Two seater,2000,Manual,RWD,562,8,289.13,https://www.beverlyhillscarclub.com/galleria_images/14714/14714_main_l.jpg
+dac04831-6cbd-4532-95ff-0e08dd88fcf3,bmw,525i,Midsize,2007,Manual,RWD,543,2,101.38,http://images.gtcarlot.com/gtgallery/5334403-640.jpg
+941746f7-44c5-423d-b913-9fa7ffa336e6,bmw,z3 coupe,Two seater,2002,Automatic,RWD,491,6,91.06,https://www.pcarmarket.com/static/media/uploads/galleries/photos/uploads/galleries/16135-gonzales-blue-m-coupe/.thumbnails/3H2A1911.jpg/3H2A1911-tiny-2048x0-0.5x0.jpg
+8f043a9b-4158-4b2a-a18e-bb43e632bf78,bmw,740i xdrive,Large,2017,Automatic,AWD,187,7,298.61,http://4dcc7867ad7d3ede515b-c168d9a794adc549c34c66310f09ef50.r12.cf1.rackcdn.com/WBA7E4C52HGU99401/f169f43e85c4e1a9bb09e16074524ce7.jpg
+d6a37322-b264-4741-aaef-d7dd09e9c6f6,bmw,z4 sdrive28i,Two seater,2015,Automatic,RWD,188,4,185.64,"https://media.carsandbids.com/cdn-cgi/image/width=2080,quality=70/4822e9034b0b6b357b3f73fabdfc10e586c36f68/photos/KPYA7Rqq-_tNFBymmXf-(edit).jpg?t=171535146620"
+53817b9a-c7c0-4f18-8c93-22ea8848d1bf,bmw,318i convertible,Minicompact,1994,Automatic,RWD,264,7,119.77,https://davidsclassiccars.com/images/full/1994-bmw-318i-convertible-red-ic-automatic-3.jpg
+3db4646d-52da-408c-85c8-e5c7efa8c198,bmw,318i/318is,Subcompact,1992,Manual,RWD,622,8,269.43,https://bimmerlife.com/wp-content/uploads/2022/07/2-875x583.jpg
+70337a81-c645-4df4-ae8d-f2fa461dd7f4,bmw,z4 roadster,Two seater,2004,Manual,RWD,261,5,133.6,https://uploads.carandclassic.co.uk/uploads/cars/bmw/13125315.jpg
+57137ec0-abda-4f32-8cd8-005c500d079a,bmw,z4 sdrive30i,Two seater,2011,Manual,RWD,247,7,288.27,https://www.jonathanmotorcars.com/imagetag/893/27/l/Used-2011-BMW-Z4-sDrive30i-Sport-Premium-1568901723.jpg
+fd73dc55-1c55-480f-9908-521501b1bf2b,bmw,230i coupe,Subcompact,2020,Automatic,RWD,535,8,295.6,https://488e175f5c56aba9c5b2-682c2a826ac0949064641e7fafcedb4a.ssl.cf1.rackcdn.com/WBA2J3C01L7F01185/eebb8f95fda0078fbccd631693c7ab7d.jpg
+924ee4ba-4931-48a0-a4c9-bfe94381b854,bmw,750i xdrive,Large,2021,Automatic,AWD,85,6,55.32,https://ffb02f4bec797bb3cdb5-54892d7a1469ef30308ce612fd61b5e8.ssl.cf1.rackcdn.com/WBA7U2C03MCE47615/dfcfd7a50d41fe4285a5d94e3792a474.jpg
+9805fbe5-7b75-4bf1-ab8c-304ff5dc9cdc,bmw,740i,Midsize,1993,Automatic,RWD,457,2,243.4,https://c8.alamy.com/comp/B4NP12/1993-bmw-740i-sedan-or-saloon-B4NP12.jpg
+e15e7a8d-0709-4a19-a662-0b0d4e85ea32,bmw,m coupe,Two seater,1999,Manual,RWD,491,2,198.24,https://cdn.dealeraccelerate.com/motoexotica/1/388/12303/1920x1440/1999-bmw-m-coupe-1999-bmw-m-coupe
+91c0fa11-fb5d-454d-94cc-62cf5a425966,bmw,128ci convertible,Subcompact,2012,Automatic,RWD,678,3,272.91,https://media.ed.edmunds-media.com/bmw/1-series/2012/oem/2012_bmw_1-series_convertible_135i_fq_oem_1_600.jpg
+b7132e67-30a5-4204-ac9e-9c2ece5a3940,bmw,430i coupe,Subcompact,2024,Automatic,RWD,699,5,227.84,https://images.carprices.com/pricebooks_data/usa/colorized/2024/BMW/View2/4_Series_Coupe/430i_xDrive/244D_300.png
+3ab17236-ed7b-40e4-b526-ace32b1504bc,bmw,z4 sdrive30i,Two seater,2025,Automatic,RWD,217,3,295.28,https://cdn.max.auto/l_109440:666c5999c0ab0e000cbb987f/o_100/t_center_overlay/t_hres/109440/WBAHF3C09SWY41584/66e0199f59fbd2b873fdee4b.jpg
+0af4aecc-0b14-448f-aa80-787d0231b146,bmw,m8 competition coupe,Subcompact,2022,Automatic,AWD,165,8,214.51,https://www.carpixel.net/w/ebcb345ea2999ea78384b2f9d1284ff9/bmw-m8-gran-coupe-competition-wallpaper-hd-107329.jpg
+aa4ae026-80ad-407e-989b-9dda6fd63d62,bmw,528i,Midsize,2008,Manual,RWD,457,5,179.34,https://www.conceptcarz.com/images/BMW/bwm_5_Series_2008-06.jpg
+cf23057e-ab35-47ee-bcdd-4cf5572f791e,bmw,318i convertible,Minicompact,1995,Automatic,RWD,483,5,24.17,https://www.pcarmarket.com/static/media/uploads/galleries/photos/uploads/galleries/12023-riccardo-bmw-cab-red/.thumbnails/IMG_2108.jpg/IMG_2108-tiny-2048x0-0.5x0.jpg
+149a2a22-0840-45d0-8ca8-594ed39fe03a,bmw,x3 xdrive28i,Small sport utility vehicle,2013,Automatic,AWD,610,3,242.96,http://reviews.carreview.com/wp-content/uploads/2013/07/064.jpg
+1e37095a-9f0a-401e-b405-7a50a845eb3f,bmw,430i convertible,Subcompact,2018,Automatic,RWD,391,6,256.76,http://images.gtcarlot.com/pictures/122567645.jpg
+ebfc1468-4e9d-4d42-a9cb-baf8c8226939,bmw,m coupe,Two seater,2001,Manual,RWD,514,5,168.5,https://rfsportscars.com/imagetag/319/3/l/Used-2001-BMW-M-Coupe.jpg
+61502c75-875b-4f72-99f6-1af60686ab36,bmw,m roadster,Two seater,1998,Manual,RWD,130,6,259.89,https://www.beverlyhillscarclub.com/galleria_images/16693/16693_main_l.jpg
+017fa7fe-e495-4e83-857a-3813e31f398b,bmw,z4 sdrive28i,Two seater,2014,Automatic,RWD,599,7,186.8,https://photos.classiccars.com/cc-temp/listing/95/3095/5776937-2014-bmw-z4-sdrive28i-std.jpg
+6bc062b8-fc20-4554-8a0c-1a31e4ad2b85,bmw,430i convertible,Subcompact,2019,Automatic,RWD,116,7,174.69,https://www.legendcarcompany.com/galleria_images/719/719_main_l.jpg
+0c735aee-f1e3-4fb2-89a3-6572037abca7,bmw alpina,roadster v8,Two seater,2003,Automatic,RWD,157,7,118.62,https://rmsothebys-cache.azureedge.net/f/6/6/8/3/4/f6683430fe9bc256588673bb9eb98431593f67a7.jpg
+9a825413-592e-42f5-8bca-4ba70114ca8a,bmw,z4 roadster,Two seater,2005,Manual,RWD,215,8,62.93,https://bringatrailer.com/wp-content/uploads/2021/08/2005_bmw_z4_2-5i_roadster_5_speed_manual_16285414193f387bc948261468fullsizeoutput_199ea.jpeg
+9ce2b38f-57a0-4543-9e69-1c5d0c84d426,mercedes-benz,sl550,Two seater,2009,Automatic,RWD,138,6,20.56,https://picolio.auto123.com/art-images/101121/2009-mercedes-benz-sl550-i07.jpg
+2ed9576f-f86f-445b-b573-982b09a5b7bb,mercedes-benz,slr,Two seater,2005,Automatic,RWD,244,7,245.84,https://www.sportscarmarket.com/wp-content/uploads/2016/01/2005-mercedes-benz-slr-mclaren-drivers-front.jpg
+144d5c98-d90e-41cc-90cc-299b91c8d5f0,mercedes-benz,cla250 4matic,Compact,2019,Automatic,4WD,691,8,297.13,https://f5c98d8f2e1b381ce5cd-be8d31c8e12f8a83c50653b2ec236153.ssl.cf1.rackcdn.com/WDDSJ4GB6KN716997/325035cae5b6f579326383e84b9e10c4.jpg
+1b886d93-9797-4d29-b4dc-79d739c3c0c9,mercedes-benz,sl500,Two seater,1998,Automatic,RWD,399,7,33.61,https://cdn.dealeraccelerate.com/vcc/1/2748/168775/1920x1440/1998-mercedes-benz-sl500
+c69f13fb-841d-4820-832a-384ae053d051,mercedes-benz,e400 coupe,Subcompact,2016,Automatic,RWD,150,3,101.42,https://cdn.dealeraccelerate.com/verrillo/1/412/36982/1920x1440/2016-mercedes-benz-e400
+71c44129-41dd-4631-8f93-1fc3a364db65,mercedes-benz,sl320,Two seater,1994,Automatic,RWD,443,4,285.2,https://barrettjacksoncdn.azureedge.net/staging/carlist/items/Fullsize/Cars/262077/262077_Front_3-4_Web.jpg
+3dad8e1e-df60-40f0-92a0-fbe42f991b0a,mercedes-benz,sl500,Two seater,2000,Automatic,RWD,685,3,196.95,"https://bringatrailer.com/wp-content/uploads/2019/06/2000_mercedes-benz_sl500_1559700215f66e7dff9f98764daTD7_5468-X3-e1561154018394.jpg?fit=940,626"
+3d133d56-f316-4de3-8b95-2cb489a15fb4,mercedes-benz,e350 4matic,Midsize,2014,Automatic,4WD,471,2,123.83,http://3.bp.blogspot.com/-KaYgDHRb--Q/UtEns94SPOI/AAAAAAACBLc/fMZhCeMbETs/s1600/2014+Mercedes-Benz+E350+4Matic+Sedan+Review+Photos+(3).jpg
+b29f41e1-f8fd-482f-8c68-ddedc1ad0ae9,mercedes-benz,sls amg gt coupe,Two seater,2015,Automatic,RWD,105,2,73.59,http://images.caricos.com/m/mercedes-benz/2015_mercedes-benz_sls_amg_gt_final_edition/images/1920x1080/2015_mercedes-benz_sls_amg_gt_final_edition_7_1920x1080.jpg
+9d9129f6-7091-4dd6-9954-77e490cdf45f,mercedes-benz,sl500,Two seater,2002,Automatic,RWD,88,3,265.78,https://i.ytimg.com/vi/UlRy_5GOiLU/maxresdefault.jpg
+7b1d8abb-f53b-49b6-8bc3-69f2a08452cf,mercedes-benz,sl500,Two seater,2003,Automatic,RWD,675,7,297.4,https://cdn.dealeraccelerate.com/gaa/22/12746/27774/1920x1440/2003-mercedes-benz-sl500
+c0e9a6bf-a728-43d5-b4db-f61fdead2bdf,mercedes-benz,300sl,Two seater,1992,Automatic,RWD,576,3,179.45,https://cdn.dealeraccelerate.com/cam/34/3662/214979/1920x1440/1992-mercedes-benz-300sl
+cffd5c21-ef4f-4afe-9f60-ee41a73bb1bb,mercedes-benz,gle350 4matic,Small sport utility vehicle,2020,Automatic,4WD,416,4,181.73,https://i.ytimg.com/vi/wf2vejopJgo/maxresdefault.jpg
+11e6afbd-b9d0-427b-96dd-d591e43974c6,mercedes-benz,amg gle53 4matic plus,Standard sport utility vehicle,2021,Automatic,4WD,652,2,28.05,https://images.autodaily.com.au/2020/09/GLE-53-003.jpg
+3f7cf720-f420-43b1-9ebd-c3c41ba0d598,mercedes-benz,sl500,Two seater,2001,Automatic,RWD,375,7,115.66,https://cdn.dealeraccelerate.com/ab/1/561/17187/1920x1440/2001-mercedes-benz-sl500
+369bb221-f008-4ed3-a294-4d72826ff883,mercedes-benz,e550 coupe,Subcompact,2010,Automatic,RWD,214,7,220.9,https://bringatrailer.com/wp-content/uploads/2021/09/2010_mercedes-benz_e550_coupe_1633028778cff72e4db35ac312feIMG_4939-4.jpg
+19bbaae7-d987-460b-b62e-cd11db3420f5,mercedes-benz,gls450 4matic,Standard sport utility vehicle,2017,Automatic,4WD,283,7,185.17,https://blog.consumerguide.com/wp-content/uploads/sites/2/2016/09/Screen-Shot-2016-09-22-at-3.06.04-PM-1024x672.png
+aa69b058-7b40-4c07-9349-3d5262ccc340,mercedes-benz,sl320,Two seater,1996,Automatic,RWD,314,7,178.94,https://cdn.dealeraccelerate.com/gaa/55/33806/419685/790x1024/1996-mercedes-benz-sl-320
+bfcf9500-731e-4497-a5fa-cd57f871615c,mercedes-benz,sl550,Two seater,2013,Automatic,RWD,298,7,244.32,https://www.carsinvasion.com/gallery/2013-mercedes-benz-sl550/2013-mercedes-benz-sl550-10.jpg
+a121d15d-f329-45e0-a1a3-f06ac4712637,mercedes-benz,500sl,Two seater,1991,Automatic,RWD,137,5,177.85,https://bringatrailer.com/wp-content/uploads/2019/06/1991_mercedes-benz_500sl_156330491770b12SL-2.jpg
+7c033f28-e47e-4cf5-938b-80b45d6fda9c,mercedes-benz,cla250 4matic,Compact,2018,Automatic,4WD,225,3,131.27,https://www.jonathanmotorcars.com/imagetag/717/4/l/Used-2018-Mercedes-Benz-CLA-CLA-250-4MATIC-1554929825.jpg
+0097bbc4-9ec6-41c9-9bb1-723999a6484f,mercedes-benz,sl320,Two seater,1997,Automatic,RWD,682,2,86.17,https://dealeraccelerate-all.s3.amazonaws.com/mce/images/7/6/1/761/5150755129218_hd_1997-mercedes-benz-sl320.jpg
+cb739b8b-9ba6-440c-9230-c2be0c8fdf52,mercedes-benz,glb250 4matic,Small sport utility vehicle,2023,Automatic,AWD,679,4,26.41,https://media.chromedata.com/MediaGallery/media/MjkzOTU4Xk1lZGlhIEdhbGxlcnk/uMe_yju1DZemSxv-qh_HzNXMRgpPBjMZKMExHZIfE2vZXpOz1m5XhaGTvt0NI4o-F7jQ68wTWVfiemIEE0WWUjVYxbwJ9ZgjJxipQKbnj89H7j4Y_yEu9fOZZgu8fod7tT1jyXcPvQMKtBI7B5i7Vdfr0cS2Fk_X6FJoaIRCJkQWLskB3byiUg/cc_2023MBS930018_01_640_149.png
+e27dfb75-d0d7-43ef-9ac4-939f7aaa5a4d,mercedes-benz,sl550,Two seater,2012,Automatic,RWD,591,6,150.81,https://www.mad4wheels.com/img/free-car-images/hires/10314/mercedes-benz-sl550-amg-sports-package-usa-version-2012-343651.jpg
+d3904411-1db1-4c73-a22d-b343e2a28a4a,mercedes-benz,sl500,Two seater,2004,Automatic,RWD,662,2,173.33,https://ccmarketplace.azureedge.net/cc-temp/listing/117/1752/14805821-2004-mercedes-benz-sl500-std.jpg
+18a096a0-8d04-45b0-9559-a8a9d280f3f7,mercedes-benz,a220 4matic,Subcompact,2022,Automatic,AWD,345,6,102.58,https://boostcarimages.blob.core.windows.net/carimages/6233/5701454/2022+Mercedes-Benz+A220+637927657186176729_1.jpg
+d6fcc3f1-afc2-40fe-aa6d-d40dfc29e896,mercedes-benz,sl500,Two seater,1999,Automatic,RWD,641,5,206.1,https://cdn.dealeraccelerate.com/cam/34/865/19250/1920x1440/1999-mercedes-benz-sl500
+fdc7c9c6-8833-4c4d-8e33-ddcee2e9c2d9,mercedes-benz,sl550,Two seater,2011,Automatic,RWD,481,6,121.73,https://www.jonathanmotorcars.com/imagetag/382/33/l/Used-2011-Mercedes-Benz-SL-Class-SL-550-1526753468.jpg
+4fe5620d-69cc-453d-81ff-79b448f67f14,mercedes-benz,sl320,Two seater,1995,Automatic,RWD,439,5,180.11,https://cdn.dealeraccelerate.com/orlando/1/520/30989/1920x1440/1995-mercedes-benz-sl320
+ce22d993-5e77-4a42-9a15-8a827ef2ddf6,mercedes-benz,300sd,Large,1993,Automatic,RWD,109,3,150.05,"https://media.carsandbids.com/cdn-cgi/image/width=2080,quality=70/da4b9237bacccdf19c0760cab7aec4a8359010b0/photos/gxqNxIZDO62.3yU-Pg7JDt.jpeg?t=159415098534"
+6300bab6-c4f1-4d35-940f-5a4e85eb006d,audi,100 quattro wagon,Small station wagon,1992,Automatic,AWD,88,7,44.66,http://static.cargurus.com/images/site/2008/05/27/05/56/1992_audi_100_4_dr_cs_quattro_awd_wagon-pic-20303.jpeg
+81f9b799-1416-4497-9895-2cd7422db94b,audi,tt roadster,Two seater,2004,Automatic,FWD,607,2,136.53,https://www.carpixel.net/w/798207823fa035ec128257abce81c462/audi-tt-roadster-s-line-wallpaper-hd-86682.jpg
+d903f6b1-71c0-431f-aca0-a29de89b39ba,audi,tt roadster,Two seater,2006,Automatic,FWD,677,2,100.5,"https://bringatrailer.com/wp-content/uploads/2022/02/2006_audi_tt_apc_9989-54743.jpg?fit=940,627"
+014b31ef-9999-43ca-81ac-8b2b3d88eb58,audi,r8,Two seater,2012,Automatic,AWD,538,7,87.12,https://www.carpixel.net/w/b92562b1f93e87b6b9a5cb278d064d9c/audi-r8-v10-coupe-plus-wallpaper-hd-87720.jpg
+b68bc906-e508-49da-b065-2629a500ccca,audi,tt coupe,Minicompact,2000,Manual,FWD,604,8,229.37,https://www.carscoops.com/wp-content/uploads/2019/12/2000-Audi-TT-Coupe-1.8-Turbo-quattro-34.jpg
+6bc78493-1ce8-47d6-8ae7-cc28e25ebde0,audi,s7,Midsize,2021,Automatic,AWD,533,2,164.3,"https://hips.hearstapps.com/hmg-prod/images/2021-audi-s7-mmp-1-1590690728.jpg?crop=0.734xw:0.678xh;0.115xw,0.133xh&resize=1200:*"
+2ece7079-f1a5-4622-952c-66d8bbd7d6d6,audi,q7,Standard sport utility vehicle,2017,Automatic,AWD,97,2,256.57,https://s1.cdn.autoevolution.com/images/news/2017-audi-q7-now-available-with-20-liter-turbo-making-252-hp-112257_1.jpg
+ed8d9137-08af-4a89-8612-177d39d4098e,audi,a7 quattro,Midsize,2016,Automatic,AWD,198,5,120.65,https://media.ed.edmunds-media.com/audi/a7/2016/oem/2016_audi_a7_sedan_prestige-quattro_fq_oem_2_1280.jpg
+50b8f8da-a8cc-404e-baef-e60315b026c6,audi,tt roadster,Two seater,2002,Manual,FWD,324,7,200.62,"https://bringatrailer.com/wp-content/uploads/2022/02/2002_audi_tt-roadster_2002_audi_tt-roadster_2ba9069d-7c82-491c-9e09-6719f95a32a5-JEUVSb-17560-17561-scaled.jpg?fit=940,627"
+34d6551e-b6ac-43ce-b7a5-fef90f9f787c,audi,r8 coupe,Two seater,2022,Automatic,AWD,441,6,35.28,https://www.carpixel.net/w/0c94a6f23572a01fbcff8845464e32ac/audi-r8-gt-coupe-car-wallpaper-116564.jpg
+1df50072-f98d-4f1f-9223-68d5477c5e9e,audi,cabriolet,Minicompact,1994,Automatic,FWD,531,3,243.41,http://momentcar.com/images/audi-cabriolet-1994-9.jpg
+d006f343-d7e0-463f-83ed-4f40db227391,audi,q7,Sport utility vehicle,2007,Automatic,AWD,540,8,256.48,http://www.carpixel.net/w/5fb18769eb6373cbdd1f3167e7606af4/audi-q7-car-wallpaper-29057.jpg
+0bb4e560-4502-49a0-9c54-5d953780cb46,audi,100,Midsize,1993,Automatic,FWD,406,6,145.86,https://momentcar.com/images/audi-100-1993-6.jpg
+2eddc7ac-5632-4615-86f0-1d7e22e606f7,audi,tt roadster,Two seater,2001,Manual,FWD,194,5,187.73,https://www.conceptcarz.com/images/Audi/audi_TT_Rdstr_manu-02.jpg
+30bad3ba-04d2-4e4e-ad64-568d31c71013,audi,cabriolet,Minicompact,1996,Automatic,FWD,285,8,151.49,https://momentcar.com/images/audi-cabriolet-1996-12.jpg
+b1124832-a481-4a24-8da0-090500a346f1,audi,coupe quattro,Subcompact,1991,Manual,AWD,291,5,146.01,http://germancarsforsaleblog.com/wp-content/uploads/2015/03/90C2.jpg
+2baff117-3563-46f9-81b9-c5bbd29a8462,audi,a5 cabriolet quattro,Subcompact,2018,Automatic,AWD,527,6,151.13,https://static0.topspeedimages.com/wordpress/wp-content/uploads/jpg/201706/audi-a5-cabriolet-dr.jpg
+b086f7a3-ec3d-45c6-b381-7d766d1e8255,audi,cabriolet,Minicompact,1998,Automatic,FWD,537,4,123.88,http://static.cargurus.com/images/site/2009/03/28/14/42/1998_audi_cabriolet-pic-56727.jpeg
+e1dcb348-5f67-4364-bc30-e07b7783f494,audi,q7,Standard sport utility vehicle,2019,Automatic,AWD,203,5,234.04,https://cars.usnews.com/static/images/Auto/custom/13869/2019_Audi_Q7_1.jpg
+feeec8a8-7e13-48f0-9cf1-c86d2b8cb33c,audi,cabriolet,Minicompact,1995,Automatic,FWD,357,3,37.04,https://media.ed.edmunds-media.com/audi/cabriolet/1995/oem/1995_audi_cabriolet_convertible_base_fq_oem_1_500.jpg
+a60afa35-e875-4c13-a472-68e0817d3c05,audi,r8 awd,Two seater,2020,Automatic,AWD,640,8,189.74,https://cdn.motor1.com/images/mgl/JvOe4/s1/2020-audi-r8-performance-review.jpg
+e68382ed-8f1c-4687-be1d-a6f0fe7d4668,audi,a3,Subcompact,2023,Automatic,FWD,626,5,263.21,https://www.futurecarstalk.com/wp-content/uploads/2022/11/2023-audi-a3-review-pricing-specification-1024x569.jpg
+a5886e75-89fc-4767-8c3d-06b19d155ddc,audi,tt roadster,Two seater,2008,Automatic,FWD,121,3,85.75,https://www.carpixel.net/w/17e44af9702e49580ca6403d03a1b726/audi-tt-roadster-wallpaper-hd-86667.jpg
+4df86d75-ff7d-46b2-a4b3-6675ab874db8,audi,a4,Compact,1999,Automatic,FWD,197,7,86.56,https://www.auto-data.net/images/f41/Audi-A4-B5-Typ-8D-facelift-1999.jpg
+e9ad4886-7a6b-4aad-9b11-fce40c86bb7c,audi,a8 l,Large,2014,Automatic,AWD,346,8,204.67,http://www.carpixel.net/w/fc707603a993ae077c2861d2accc38ad/audi-a8-l-wallpaper-hd-26707.jpg
+40e60e9b-3bba-4139-92a7-fa4864ca9fb6,audi,tt roadster,Two seater,2005,Automatic,FWD,533,5,209.88,https://www.planetcarsz.com/assets/uploads/2015/01/AUDI+TT+ROADSTER+2005+001.jpg
+41357282-03ca-4975-93a5-a68fc7b029dd,audi,tt roadster quattro,Two seater,2009,Automatic,AWD,145,4,25.26,https://www.carspecs.us/photos/295e44daa167ab8660b73b81218c99c4c23d989d-2000.jpg
+eba71d87-0f2e-4e2e-abd9-fe54d3adf0ad,audi,a8,Midsize,2013,Automatic,AWD,432,4,293.91,https://media.ed.edmunds-media.com/audi/a8/2013/oem/2013_audi_a8_sedan_30t-quattro_fq_oem_1_1280.jpg
+307fce46-93dd-42e0-85fc-e2b9780b8daa,audi,tt roadster quattro,Two seater,2015,Automatic,AWD,474,6,86.2,http://www.ausmotive.com/pics/2014/Audi-TTS-Roadster-09.jpg
+4283168a-ecc8-4338-826a-b206cef9d203,audi,s5,Subcompact,2010,Manual,AWD,289,2,30.91,https://s1.cdn.autoevolution.com/images/gallery/AUDI-S5-Sportback-5819_28.jpg
+724efc89-5c19-4e6b-bf68-d8f7dc38df44,volkswagen,golf r,Compact,2016,Automatic,AWD,595,2,145.91,https://smartcdn.gprod.postmedia.digital/driving/wp-content/uploads/2015/12/golfr-3.jpg
+a6fbe626-5b82-4917-9dce-ada957f5f5c9,volkswagen,eos,Subcompact,2010,Manual,FWD,88,4,161.45,https://images.hgmsites.net/hug/volkswagen_100302681_h.jpg
+eae7ce54-b2cd-485a-b117-d28d4bdcbe06,volkswagen,atlas,Small sport utility vehicle,2024,Automatic,FWD,406,2,215.52,https://www.gtopcars.com/wp-content/uploads/2023/06/2024-Volkswagen-Atlas-Cross-Sport.jpg
+21ee57ee-cac7-43a1-bdec-6e873a103560,volkswagen,new beetle convertible,Minicompact,2006,Manual,FWD,287,6,51.25,https://cdn.dealeraccelerate.com/ccl/1/4300/114615/1920x1440/2006-volkswagen-new-beetle-convertible
+0289316e-8842-47d6-beac-ad1fa83941cf,volkswagen,cabrio,Subcompact,1999,Automatic,FWD,535,2,221.17,https://www.bestcarfinder.com/photos/sale-by-owner/used-volkswagen-cabrio-1999-82125571_1_l.jpg
+2cfbac4f-9d81-45db-8c53-291e12645fa0,volkswagen,eos,Subcompact,2011,Manual,FWD,101,2,102.1,https://images.hgmsites.net/hug/2011-volkswagen-eos-2-door-convertible-lux-sulev-angular-front-exterior-view_100330827_h.jpg
+21cf45a8-f83a-4486-8c2a-d0eafbfcfbf7,volkswagen,touareg,Standard sport utility vehicle,2014,Automatic,AWD,593,8,169.83,https://media.whatcar.com/migration/articles/vwtouaregfd-20140919094120895.jpg
+f9020059-c047-4a7f-a8dc-b9a711d782ad,volkswagen,atlas,Small sport utility vehicle,2021,Automatic,FWD,466,2,170.92,https://images.hgmsites.net/med/2021-volkswagen-atlas-2-0t-s-fwd-ltd-avail-angular-front-exterior-view_100778347_m.jpg
+3d824105-3eec-4a9e-909a-0e469a425d79,volkswagen,new beetle convertible,Minicompact,2004,Manual,FWD,124,2,216.42,https://www.carspecs.us/photos/3ca7945aa900ca566e36fb9a545384b260f39e82-2000.jpg
+52c5e97f-bb1c-4af7-83e6-950e6bca40fb,volkswagen,corrado slc,Subcompact,1994,Automatic,FWD,144,3,283.45,https://www.luxsport.com/galleria_images/625/625_p3_l.jpg
+43f7dc39-89ea-4cf9-a872-6e860776eed3,volkswagen,cabriolet,Minicompact,1991,Automatic,FWD,194,8,133.45,https://cdn.dealeraccelerate.com/stlouis/1/1758/68260/1920x1440/1991-volkswagen-cabriolet
+a5698630-03a5-455e-95d2-bde9047abca0,volkswagen,cabrio,Subcompact,1996,Automatic,FWD,654,4,52.46,https://neo-drive.com/images1600_/1996-volkswagen-cabrio-1.jpg
+9c9da2f0-269f-4bc2-89ad-046ffb58ef38,volkswagen,cabrio,Subcompact,1998,Automatic,FWD,578,5,95.48,https://photos.carspecs.us/2eb30a18de02aa10c6d3c581927d2289ccd80a07-2000.jpg
+81f2c935-40e7-48aa-9bf8-e60a925d9ca8,volkswagen,gti,Compact,2015,Automatic,FWD,696,5,99.28,https://tflcar.com/wp-content/uploads/2014/05/2015_volkswagen_gti_red.jpg
+57afcf7a-7399-448a-915b-90bd2afcf6c1,volkswagen,beetle,Subcompact,2012,Automatic,FWD,342,7,216.99,https://images.hgmsites.net/hug/2012-volkswagen-beetle_100393732_h.jpg
+75efc0bb-a7cc-4c65-ab9e-000c859c7cf9,volkswagen,atlas cross sport,Small sport utility vehicle,2020,Automatic,FWD,583,2,100.68,https://www.carscoops.com/wp-content/uploads/2019/10/d17b106c-2020-vw-atlas-cross-sport-unveiled-34.jpg
+0a0c490d-0b2f-49f0-8343-08f49bc60b7d,volkswagen,jetta,Compact,2019,Automatic,FWD,483,3,241.04,https://hips.hearstapps.com/hmg-prod/images/2019-volkswagen-jetta-sel-1545153182.jpg
+c3ad9d6a-66e8-4327-ad2a-a597264a88cb,volkswagen,eos,Subcompact,2008,Automatic,FWD,513,5,154.33,https://momentcar.com/images/volkswagen-eos-2008-3.jpg
+8747822a-8b52-441a-9fcb-0902b91bd210,volkswagen,cabrio,Subcompact,1995,Automatic,FWD,289,7,201.66,https://bringatrailer.com/wp-content/uploads/2021/03/1995_volkswagen_cabrio_1617824662b619d095cabriored-100.jpg
+b8f584a1-d1eb-4ce5-bd1c-edd017b1a88c,volkswagen,new beetle convertible,Minicompact,2003,Manual,FWD,130,7,42.22,https://cdn.dealeraccelerate.com/adrenalin/1/809/20354/790x1024/2003-volkswagen-new-beetle-convertible-2dr-convertible-gls-manual
+6898b767-8abe-43f7-8b53-a7934f99495d,volkswagen,cabrio,Subcompact,2000,Automatic,FWD,98,7,91.92,https://i.pinimg.com/originals/7e/12/b8/7e12b8b29cb9739c1c007d270d200cc4.jpg
+e73a6a74-7c07-4aa7-82c7-d9b49900c7e3,volkswagen,cabrio,Subcompact,2002,Automatic,FWD,129,4,191.84,http://static.cargurus.com/images/site/2013/09/16/15/52/2002_volkswagen_cabrio_2_dr_glx_convertible-pic-8464238809796409618.jpeg
+dfd34eb5-70e9-4e2e-b05b-869a09b2801d,volkswagen,taos,Small sport utility vehicle,2022,Automatic,FWD,272,3,52.67,https://www.carscoops.com/wp-content/uploads/2021/05/2022-VW-Taos.jpg
+305e64b8-243a-445d-932e-313cc3af6d76,volkswagen,gti,Compact,2007,Manual,FWD,407,7,222.33,http://momentcar.com/images/volkswagen-gti-2007-3.jpg
+005dccf6-9364-444f-a7ad-e47aee5c46fe,volkswagen,golf iii / gti,Compact,1993,Automatic,FWD,594,7,160.41,http://s1.cdn.autoevolution.com/images/gallery/VOLKSWAGENGolfIIIGTI-3529_2.jpg
+fe12db5d-9c36-4810-b9be-1629fd07af5e,volkswagen,cabrio,Subcompact,2001,Automatic,FWD,113,8,51.64,http://static.cargurus.com/images/site/2013/04/30/20/56/2001_volkswagen_cabrio_2_dr_gl_convertible-pic-8925989438050953831.jpeg
+6d0fd27f-b95c-4c9b-b5b7-0d60886d4932,volkswagen,atlas,Small sport utility vehicle,2018,Automatic,FWD,536,7,280.81,http://www.hdcarwallpapers.com/walls/2018_volkswagen_atlas-HD.jpg
+472e7a40-8e9d-407b-a608-fa47a548c3de,volkswagen,cc,Compact,2013,Automatic,FWD,281,7,193.27,https://media.ed.edmunds-media.com/volkswagen/cc/2013/ns/2013_volkswagen_cc_f34_ns_120412_1600.jpg
+020f02ec-d9a9-4307-9db5-cb5d52d209a7,volkswagen,tiguan,Small sport utility vehicle,2017,Automatic,FWD,470,3,87.06,https://s3.caradvice.com.au/wp-content/uploads/2017/01/Tiguan-162TSI-48-1.jpg
+e9736a45-cb6e-4a2b-9e25-0a494b19ced7,volkswagen,cabrio,Subcompact,1997,Automatic,FWD,653,7,218.9,https://momentcar.com/images600_/volkswagen-cabrio-1997-3.jpg
+2f602b9c-1456-4c83-b0a4-c30366c60ce9,nissan,370z roadster,Two seater,2018,Automatic,RWD,287,2,81.99,http://tractionlife.com/wp-content/uploads/2018/07/2018-Nissan-370Z-Roadster-Touring-Sport-review3.jpg
+b1e0e8d9-c0c5-4a98-b527-0f802756071a,nissan,sentra/200sx,Subcompact,1999,Automatic,FWD,585,7,299.36,http://momentcar.com/images/1999-sentra-1.jpg
+bd3b7199-6f5a-4283-a25f-32de2088bdbe,nissan,350z,Two seater,2005,Manual,RWD,275,4,176.64,https://images.classic.com/vehicles/7984a189f9ad361da6a136fb7fb5bc1e4adcdfa0.jpg?auto=format&fit=crop&ar=16:9&w=5500
+8a83c5a4-883e-44d7-8d2c-e5e4f16dac9b,nissan,gt-r,Subcompact,2015,Automatic,AWD,598,4,250.76,http://www.hdcarwallpapers.com/walls/2015_nissan_gt_r-wide.jpg
+8a0cc835-e66e-417e-ad62-9e623cf83d2f,nissan,350z,Two seater,2004,Manual,RWD,421,3,48.54,http://static.cargurus.com/images/site/2014/04/19/00/31/2004_nissan_350z_enthusiast-pic-4856078835074873636.jpeg
+ae57ff5c-049d-41a3-8277-6fad711791a3,nissan,quest,Minivan,2007,Automatic,FWD,504,8,248.64,https://momentcar.com/images/2007-quest-1.jpg
+a431f19c-75c9-4909-9448-5fc17bcca579,nissan,300zx,Two seater,1996,Automatic,RWD,405,8,80.57,https://ccmarketplace.azureedge.net/cc-temp/listing/99/4833/8287046-1996-nissan-300zx-std.jpg
+4a3670cc-322f-4edb-bd05-fd34e3c84c3c,nissan,pathfinder 2wd,Small sport utility vehicle,2022,Automatic,FWD,132,5,72.51,https://www.carquotes.com/mvPhoto.ashx?newCarBodyStyleId=76202
+1368ce70-0c28-4541-8038-8c62b3e75035,nissan,gt-r,Subcompact,2021,Automatic,AWD,185,2,267.62,https://cimg3.ibsrv.net/ibimg/hgm/1920x1080-1/100/758/nissan-gt-r_100758127.jpg
+d5f02bf1-864b-4ff6-8a0c-80161d70c4c3,nissan,370z,Two seater,2017,Automatic,RWD,115,3,114.87,https://www.topgear.com/sites/default/files/cars-car/carousel/2017/10/370z_025.jpg
+0ee61625-0075-442e-b476-f275cc9d8f2f,nissan,gt-r,Subcompact,2011,Automatic,AWD,671,7,292.01,https://images.hgmsites.net/hug/2011-nissan-gt-r-2-door-coupe-premium-angular-front-exterior-view_100316416_h.jpg
+6f27692b-78e7-4e30-a87e-05e99cf97702,nissan,300zx,Two seater,1995,Automatic,RWD,467,6,63.02,http://static.cargurus.com/images/site/2008/09/04/12/24/1995_nissan_300zx_2_dr_turbo_hatchback-pic-3028.jpeg
+62156eca-7203-408d-b1e2-8b7f82e08e80,nissan,240sx,Minicompact,1998,Automatic,RWD,645,3,87.27,http://topcarspecs.com/manufacturers/nissan/nissan-240sx/nissan-240sx-1998/nissan-240sx-1998-5.jpg
+c45803e7-cd29-42c3-90b0-4d827fe789b4,nissan,240sx,Minicompact,1997,Automatic,RWD,278,8,96.92,https://barnfinds.com/wp-content/uploads/2023/01/1997-Nissan-240SX-Survivor.jpg
+79741466-12f5-444b-9806-9ff8a3b53ee4,nissan,gt-r,Subcompact,2013,Automatic,AWD,458,6,58.84,http://st.automobilemag.com/uploads/sites/10/2015/09/2013-Nissan-GT-R-three-quarters-in-motion-view-002.jpg
+55e17648-9f81-4616-b343-7917bcd259c5,nissan,maxima,Midsize,1993,Automatic,FWD,574,7,21.79,https://photos.carspecs.us/ff767459ad593893c2a6bfda783bf1f57b80db96-2000.jpg
+d90540de-4774-47b5-9577-bd4ce64a04e8,nissan,350z,Two seater,2003,Manual,RWD,515,6,135.96,https://www.auto-data.net/images/f52/Nissan-350Z-Z33.jpg
+b1507ad7-3650-4084-934e-5efbe27cfc35,nissan,sentra,Compact,2002,Automatic,FWD,323,7,80.44,https://www.supercars.net/blog/wp-content/uploads/2016/02/2002_Nissan_SentraSERVSpec3.jpg
+0fb5fac3-9c66-45ee-b0eb-57ab5edebc2a,nissan,z,Two seater,2023,Manual,RWD,310,8,269.18,https://cdn.sportscardigest.com/wp-content/uploads/20220504120659/2023-Nissan-Z-Preview-4.jpg
+7dcc8423-76a0-4f50-97ea-0a64116ab017,nissan,370z,Two seater,2019,Automatic,RWD,278,4,290.12,https://images.hgmsites.net/hug/2019-nissan-370z_100657959_h.jpg
+8b23dfbe-3ea2-400a-9bed-c132e062246f,nissan,300zx,Two seater,1994,Automatic,RWD,444,3,83.72,https://www.thedrive.com/uploads/2022/07/25/1994_nissan_300zx-twin-turbo_1994_nissan_300zx-twin-turbo_0ee7700a-ec75-4ddb-b88a-37980ed7c9a9-4MXjnU-scaled-2.jpg?auto=webp
+c23a6ded-7252-46e8-80a3-587240dc38cc,nissan,gt-r,Subcompact,2024,Automatic,AWD,568,2,176.52,https://cimg3.ibsrv.net/ibimg/hgm/1920x1080-1/100/871/nissan-gt-r_100871719.jpg
+68903c06-95c8-490e-a9aa-bff6b06e0358,nissan,gt-r,Subcompact,2016,Automatic,AWD,235,4,149.79,https://images.hgmsites.net/hug/2016-nissan-gt-r-nismo_100531511_h.jpg
+97d871b2-8d5e-43be-8c7d-a7abbe913e55,nissan,370z,Two seater,2020,Automatic,RWD,571,2,135.06,https://i.gaw.to/vehicles/photos/34/45/344527-2020-nissan-370z.jpg
+a1877091-ff68-457a-936f-f4b5c906566a,nissan,gt-r,Subcompact,2010,Automatic,4WD,93,8,87.64,https://images.hgmsites.net/hug/2010-nissan-gt-r-2-door-coupe-angular-front-exterior-view_100258088_h.jpg
+5dfa1dd8-8766-4249-b62e-9c875786c566,nissan,altima,Compact,2000,Automatic,FWD,238,4,46.31,http://static.cargurus.com/images/site/2014/11/07/12/47/2000_nissan_altima_se-pic-1901524997772618846.jpeg?interpolation=lanczos-none&output-quality=85&downsize=300:225
+27fc79f4-efbb-44c3-911b-319b72bbb10d,nissan,titan 2wd,Standard pickup truck,2009,Automatic,RWD,435,5,39.17,https://cdn.jdpower.com/ChromeImageGallery/Expanded/White/640/2009NIS012b_640/2009NIS012b_640_01.jpg
+15a9ea28-4c97-481b-88b1-05f4cbf55d89,nissan,300zx,Two seater,1992,Automatic,RWD,519,4,189.52,https://images.classic.com/vehicles/366f6a4cb595033f5fa3aa0d8c424fd2fee127b3.jpg?auto=format&fit=crop&ar=4:3
+12952594-42b1-41f0-a7be-df4a5fa262ff,nissan,altima,Compact,2001,Automatic,FWD,208,5,80.37,http://static.cargurus.com/images/site/2013/08/23/16/29/2001_nissan_altima_gxe-pic-8438687004467883597.jpeg
+fcd07ba8-977c-4463-9f27-84e33d469adc,nissan,gt-r,Subcompact,2012,Automatic,AWD,106,6,180.13,http://s3.caradvice.com.au/wp-content/uploads/2012/03/GTR0541.jpg
+2a07802a-3f06-4421-a972-fd5817d08300,hyundai,santa fe sport fwd,Small sport utility vehicle,2017,Automatic,FWD,438,6,175.73,https://www.carpixel.net/w/e24c4b7072bb2e551bcef12f796630ae/hyundai-santa-fe-sport-wallpaper-hd-38828.jpg
+597050b5-42c8-4b0d-9955-0aa855f2302d,hyundai,genesis coupe,Subcompact,2010,Automatic,RWD,124,8,49.11,https://www.conceptcarz.com/images/Hyundai/2010-Hyundai-Genesis-Coupe-Image-09-1680.jpg
+fe6db19d-0c56-4d3b-a2e5-260377ed181d,hyundai,excel,Subcompact,1994,Automatic,FWD,475,5,274.33,http://momentcar.com/images/1994-excel-1.jpg
+78cb4182-df42-4f9a-aa4d-4efb975efc6a,hyundai,excel,Subcompact,1992,Automatic,FWD,194,6,105.68,http://www.hongliyangzhi.com/manufacturers/hyundai/hyundai-excel/hyundai-excel-1992/hyundai-excel-1992-4.jpg
+98f20c2a-5d72-42ed-9fcc-d2bcc0f97ad5,hyundai,sonata,Midsize,1993,Automatic,FWD,182,5,89.74,http://momentcar.com/images/hyundai-sonata-1993-10.jpg
+514c3caf-8f23-49c8-8e9d-24481a0a5c0b,hyundai,sonata,Large,2008,Automatic,FWD,253,3,164.95,https://st.automobilemag.com/uploads/sites/10/2015/11/2008-hyundai-sonata-gls-v6-sedan-angular-front.png?interpolation=lanczos-none&fit=around|300:225
+ce10d05c-2da5-46c8-8c26-e2045af17187,hyundai,veloster,Compact,2021,Automatic,FWD,496,2,273.28,https://cdn.motor1.com/images/mgl/OpjwY/s1/2021-hyundai-veloster-n-lead.jpg
+a963417e-61a4-4e9a-8b97-a3702489826a,hyundai,accent,Subcompact,1999,Automatic,FWD,255,4,138.04,http://momentcar.com/images/hyundai-accent-1999-3.jpg
+592bec5a-59fc-4cfa-8384-4c22a279ce13,hyundai,palisade awd,Standard sport utility vehicle,2020,Automatic,AWD,171,5,79.09,https://www.groovecar.com/media/stock/images/color/2020/hyundai/palisade/awd-se-4dr-suv/2020-hyundai-palisade-awd-se-4dr-suv-steel-graphite-rear-3-4-large.jpg
+587c66c1-8674-4e60-b68a-8ea8efa0b92d,hyundai,accent,Compact,2012,Automatic,FWD,502,4,70.56,https://images.hgmsites.net/hug/2012-hyundai-accent_100347382_h.jpg
+e158b442-15b8-4548-b90b-516679131ee8,hyundai,veloster,Compact,2016,Automatic,FWD,322,2,80.01,http://st.automobilemag.com/uploads/sites/11/2015/10/2016-Hyundai-Veloster-Turbo-top-view-rear-three-quarter1.jpg
+e6a1e11e-d4ad-48aa-a963-621007b5eeb5,hyundai,tiburon,Subcompact,2005,Automatic,FWD,107,2,28.55,http://static.cargurus.com/images/site/2008/04/02/09/17/2005_hyundai_tiburon_gt-pic-40729.jpeg
+cd9063d2-ed10-43ca-8f96-f98c7ec3cc54,hyundai,accent,Compact,1996,Automatic,FWD,445,8,216.11,https://media.ed.edmunds-media.com/hyundai/accent/1996/oem/1996_hyundai_accent_2dr-hatchback_gt_fq_oem_1_500.jpg
+1d266cd7-ea3c-43af-8e1b-a1785e739395,hyundai,veloster,Compact,2019,Automatic,FWD,517,7,92.64,https://www.hdcarwallpapers.com/walls/2019_hyundai_veloster_turbo_4k-HD.jpg
+2e0d8049-70c3-4403-91dc-53680b73a7a4,hyundai,azera,Large,2011,Automatic,FWD,269,2,292.98,http://momentcar.com/images/hyundai-azera-2011-4.jpg
+c82736cb-cb38-4f86-9c16-15f0eb46d737,hyundai,tiburon,Subcompact,2004,Automatic,FWD,322,4,115.32,http://momentcar.com/images/2004-tiburon-2.jpg
+5211820f-9628-42bd-a17a-68eefc39f033,hyundai,elantra,Midsize,2023,Automatic,FWD,649,3,256.96,https://gaadiwaadi.com/wp-content/uploads/2023/02/2023-Hyundai-Elantra.jpg
+e15bca32-9a4c-4b0f-9120-5b8b974baf2a,hyundai,palisade fwd,Small sport utility vehicle,2024,Automatic,FWD,292,4,150.75,https://images.carexpert.com.au/crop/1200/630/app/uploads/2023/10/2024-Hyundai-Palisade-1.jpg
+cff1f2d2-032e-4156-a777-11680b09b99b,hyundai,tiburon,Subcompact,2002,Automatic,FWD,481,8,91.46,"https://res.cloudinary.com/carsguide/image/upload/f_auto,fl_lossy,q_auto,t_cg_hero_large/v1/editorial/dp/albums/album-5172/lg/2002-Tiburon.jpg"
+2167e7c8-d6e6-487d-9e3a-0f5d8a56c102,hyundai,genesis rwd,Large,2015,Automatic,RWD,630,6,59.58,https://www.automotiveaddicts.com/wp-content/uploads/2015/02/Genesis-Front.jpg
+e2d4658e-69ab-45d2-9b7a-ba86896f4c3c,hyundai,tiburon,Subcompact,2006,Automatic,FWD,204,4,79.75,https://www.conceptcarz.com/images/Hyundai/2006-Hyundai-Tiburon-Coupe-01-800.jpg
+30b1143d-762a-4e3d-b494-557894d610c2,hyundai,tiburon,Subcompact,2003,Automatic,FWD,235,7,293.95,http://static.cargurus.com/images/site/2009/03/19/20/25/2003_hyundai_tiburon_gt_v6-pic-59700.jpeg
+af2378f7-b084-4b40-a80a-e49269e7dcf6,hyundai,tiburon,Subcompact,2000,Automatic,FWD,413,2,112.34,http://static.cargurus.com/images/site/2008/08/03/10/08/2000_hyundai_tiburon_base-pic-16769.jpeg
+a3419a0f-6bb6-4a5b-999e-02ef80d30050,hyundai,tiburon,Subcompact,2001,Automatic,FWD,565,4,75.69,http://momentcar.com/images/hyundai-tiburon-2001-3.jpg
+4c427e33-f42b-4f2f-8e62-2b5b39c4a697,hyundai,azera,Large,2009,Automatic,FWD,488,5,169.88,https://images.hgmsites.net/lrg/hyundai_100178935_l.jpg
+8db70bec-f05a-4650-a3fd-c1c96e08302f,hyundai,tiburon,Subcompact,1998,Automatic,FWD,186,8,236.66,https://media.ed.edmunds-media.com/hyundai/tiburon/1998/oem/1998_hyundai_tiburon_2dr-hatchback_fx_fq_oem_1_500.jpg
+edb45292-e9ed-4170-b10a-b450929ead2e,hyundai,genesis coupe,Subcompact,2013,Automatic,RWD,671,3,137.15,https://media.ed.edmunds-media.com/hyundai/genesis-coupe/2013/oem/2013_hyundai_genesis-coupe_coupe_38-track_fq_oem_9_1280.jpg
+e6613e42-1318-424b-9eab-f24556ad0ce3,hyundai,sonata,Large,2018,Automatic,FWD,671,5,290.49,https://4.bp.blogspot.com/-UzkSvb8tE2c/WUFrfFAP81I/AAAAAAAA2Qo/GHOc5-_wH9M-6HBsA9u_9xqbaAS10fQeACLcBGAs/s1600/2018-Hyundai-Sonata-04.jpg
+ef02d6b3-6aa0-4a74-871b-2cd9b0f3b6f0,hyundai,tiburon (coupe),Subcompact,1997,Automatic,FWD,450,7,213.99,https://consumerguide.com/wp-content/uploads/2014/07/98803031990108.jpg
+c13f9768-f506-4a26-bf50-14c16c3fe477,hyundai,accent,Compact,2007,Automatic,FWD,122,5,179.85,https://www.conceptcarz.com/images/Hyundai/hyundai_accent_GS_manu-07_010.jpg
+4f143691-312b-47b6-837a-f4d707ff1afb,kia,sedona,Minivan,2007,Automatic,FWD,671,6,42.69,http://images.thecarconnection.com/lrg/2007_kia_sedona_100022055_l.jpg
+4406a3df-cf53-4cbe-abfe-bf4b99324ad8,kia,sephia/spectra,Compact,2000,Automatic,FWD,421,3,214.42,http://static.cargurus.com/images/site/2012/08/12/15/15/2000_kia_sephia_4_dr_ls_sedan-pic-688244645755185640.jpeg
+fc42a672-ea76-4c28-8513-80a4d0eed27e,kia,sephia,Compact,1997,Automatic,FWD,194,8,225.65,https://momentcar.com/images600_/kia-sephia-1997-1.jpg
+6ef14009-67e2-48ce-8a8e-ef680e18f2a3,kia,rio,Compact,2013,Automatic,FWD,482,7,125.97,http://st.automobilemag.com/uploads/sites/10/2015/09/2013-Kia-Rio-Sedan-Front-Three-Quarters-2.jpg
+2d38564d-f4fa-47e7-ae79-79bde01cd94e,kia,sportage fwd,Small sport utility vehicle,2017,Automatic,FWD,568,8,78.28,http://www.car-revs-daily.com/wp-content/uploads/2016/04/2017-Kia-Sportage-SX-FWD-2-1600x933.jpg
+8f3f6409-5f10-42e5-b07c-9169bf07a976,kia,rio,Compact,2002,Automatic,FWD,129,8,123.59,http://images.gtcarlot.com/pictures/15485787.jpg
+f1cc3dd1-99a7-4318-ada2-09f5cb246d35,kia,sephia,Compact,1999,Automatic,FWD,624,5,24.15,http://momentcar.com/images/kia-sephia-1999-5.jpg
+d468c836-c26d-49df-b5bb-049658f52c21,kia,stinger awd,Midsize,2022,Automatic,AWD,94,2,60.82,"https://hagerty-media-prod.imgix.net/2021/11/2022-Kia-Stinger-GT2-AWD-17.jpg?auto=format,compress&fit=crop&h=427&ixlib=php-3.3.0&w=640"
+74affd3a-3465-4afd-9abd-0c83ec973bcd,kia,rio,Compact,2001,Automatic,FWD,102,4,206.57,http://momentcar.com/images/kia-rio-2001-1.jpg
+2a437a69-6081-4215-8027-3e9cf6764bb9,kia,sorento fe awd,Small sport utility vehicle,2016,Automatic,AWD,610,3,44.33,https://d2uf4zk8t94n2d.cloudfront.net/40158/data/_DSC1004-1019x680.jpg
+4e2bb5b9-0495-4fdf-b350-ebee96a5b6b0,kia,sephia,Compact,1994,Automatic,FWD,331,6,154.61,http://momentcar.com/images/kia-sephia-1994-10.jpg
+57016132-25ec-4118-a6a2-7bbcf3eb0e85,kia,rio,Compact,2006,Automatic,FWD,205,6,134.69,https://static0.topspeedimages.com/wordpress/wp-content/uploads/jpg/200603/2006-kia-rio-15.jpg
+c56718a8-32d9-47d3-9970-3c605156446e,kia,sephia,Compact,1995,Automatic,FWD,440,6,59.87,https://img.autoabc.lv/Kia-Sephia/Kia-Sephia_1995_Sedans_2261555201.jpg
+a10a7870-1b32-4df1-b74a-cd085a7499d4,kia,seltos fwd,Small sport utility vehicle,2021,Automatic,FWD,607,3,271.34,https://hips.hearstapps.com/amv-prod-cad-assets.s3.amazonaws.com/vdat/submodels/kia_seltos_kia-seltos_2021-1581366480680.jpg?fill=18:11&resize=480:*
+3422ae21-9c3b-47af-abc7-aff2dde32c31,kia,sorento fwd,Small sport utility vehicle,2019,Automatic,FWD,164,2,232.45,https://images.hgmsites.net/med/2019-kia-sorento-sx-v6-fwd-angular-front-exterior-view_100678500_m.jpg
+b6fec96e-accf-46ce-bfeb-ea71b026fcf9,kia,sephia,Compact,1993,Automatic,FWD,591,3,160.44,https://img.autoabc.lv/Kia-Sephia/Kia-Sephia_1993_Sedans_2261555033.jpg
+76e0880f-5b19-4e51-98e1-dc8ea2a3838d,kia,sorento 2wd,Small sport utility vehicle,2014,Automatic,FWD,253,6,96.95,https://imagescdn.dealercarsearch.com/Media/14449/18839577/638388521687473730.jpg
+847d151d-80e6-4d61-8212-c613434ab840,kia,rio,Compact,2003,Automatic,FWD,557,4,295.13,https://www.carspecs.us/photos/bcf638a8ed0717eaac1ca43d9549d30a0373fa1a-2000.jpg
+a34be4f9-7170-4283-a469-0f3895486a16,kia,sorento fwd,Small sport utility vehicle,2018,Automatic,FWD,298,2,74.37,https://d67ceb0a64060f5d13e2-ea231a1cbd72d182c0ae5eb5d487cfbf.ssl.cf1.rackcdn.com/5XYPG4A31JG424065/974a57f21c19d3420fe81fbcfbc32ae7.jpg
+30578a47-42cd-4049-9007-2e071890968e,kia,sephia,Compact,1998,Automatic,FWD,474,8,48.23,http://momentcar.com/images/kia-sephia-1998-1.jpg
+a81ccddd-4642-4da2-8636-c85e7416fb2d,kia,rondo,Midsize station wagon,2012,Automatic,FWD,102,6,278.5,https://imageonthefly.autodatadirect.com/images/?IMG=CAC20KIC091B0101.png&HEIGHT=496&WIDTH=751
+4d6c8355-f421-415f-a122-9618fd65086a,kia,rio,Compact,2005,Automatic,FWD,231,7,178.92,http://momentcar.com/images/kia-rio-2005-12.jpg
+a112e0c8-a04e-4314-84bc-31f35bff8733,kia,spectra,Midsize,2008,Automatic,FWD,201,3,235.33,https://media.ed.edmunds-media.com/kia/spectra/2008/oem/2008_kia_spectra_sedan_ex_fq_oem_2_815.jpg
+347140ee-76ac-4cef-8b91-eb26c4c964d4,kia,k5 awd,Large,2025,Automatic,AWD,153,4,95.85,https://smart-phoneprice.com/wp-content/uploads/2023/03/2025-Kia-K5.jpg
+38fa0841-65f2-4fc6-8ec4-ec13cd466f5f,kia,k900,Large,2015,Automatic,RWD,380,3,56.79,https://images.hgmsites.net/hug/2015-kia-k900_100447130_h.jpg
+1f2ac456-c270-4418-bf1a-6a9c1034a111,kia,optima,Midsize,2009,Automatic,FWD,111,5,115.73,https://momentcar.com/images/kia-optima-2009-8.jpg
+9a4cfee0-25eb-4a2f-8661-56533ebfd7c8,kia,sportage fwd,Small sport utility vehicle,2023,Automatic,FWD,563,3,181.48,https://img.sm360.ca/images/newcar/ca/2023/kia/sportage/lx-fwd/suv/exteriorColors/2023_kia_sportage_lx_032_swp.png
+c7d53caa-bd80-4297-8606-ff4fc94b0fb2,kia,forte,Compact,2010,Automatic,FWD,552,5,258.46,https://images.hgmsites.net/hug/kia_100182596_h.jpg
+c998b2ae-795c-4f44-b4d2-8cd4e1602b68,kia,rio,Compact,2004,Automatic,FWD,404,2,33.84,http://momentcar.com/images/kia-rio-2004-1.jpg
+47593c7d-17f3-4a5a-95c9-621044e74251,kia,sephia,Compact,1996,Automatic,FWD,697,6,127.02,http://static.cargurus.com/images/site/2013/09/27/14/09/1996_kia_sephia_4_dr_rs_sedan-pic-9065029430925509025.jpeg
+c3acabea-c51f-4621-8a87-bb076040882d,subaru,legacy awd turbo,Compact,1993,Manual,AWD,321,6,47.99,http://smclassiccars.com/uploads/postfotos/1993-subaru-legacy-rare-22-turbo-awd-63k-miles-limited-production-1.jpg
+1897c669-9072-4b85-bee3-998afe496d34,subaru,wrx,Compact,2017,Manual,AWD,485,7,104.48,https://media.ed.edmunds-media.com/subaru/wrx/2017/oem/2017_subaru_wrx_sedan_premium_fq_oem_1_1280.jpg
+9b2bd382-50ab-4a99-8468-2911899dc1c5,subaru,impreza awd,Subcompact,2003,Automatic,AWD,283,6,65.86,https://abstoragev2.blob.core.windows.net/auctions/41323/cars/medium/41323-1a_ex.JPG
+a1069caa-daca-4bd0-8cdb-3f68ac7b2be1,subaru,impreza awd,Compact,2012,Manual,AWD,315,8,277.41,https://images.hgmsites.net/hug/2012-subaru-impreza-sedan_100365950_h.jpg
+85297aa8-aa01-441c-9a1d-5d9210b2accf,subaru,ascent,Standard sport utility vehicle,2020,Automatic,AWD,359,4,145.66,https://www.autotrader.com/wp-content/uploads/2020/02/2020-Subaru-Ascent-.10..jpg
+0f960416-f422-4d7f-b5a3-4cb8110c1c24,subaru,legacy awd,Large,2022,Automatic,AWD,531,5,108.55,https://www.groovecar.com/media/stock/images/stills/2022/subaru/legacy/awd-touring-xt-4dr-sedan/2022-subaru-legacy-awd-touring-xt-4dr-sedan-089-large.jpg
+96e8bf8d-6b8f-49dd-875f-b04d596eec75,subaru,brz,Minicompact,2013,Automatic,RWD,284,6,128.56,
+ca4c77cd-05cf-492e-8ba1-e7fe42b52871,subaru,impreza awd,Compact,2011,Manual,AWD,401,8,38.74,https://www.groovecar.com/media/stock/images/stills/2011/subaru/impreza/awd-wrx-4dr-sedan/2011-subaru-impreza-awd-wrx-4dr-sedan-116-large.jpg
+5587a28d-136c-40cd-bca8-6c53c47db93d,subaru,impreza awd,Subcompact,2007,Automatic,AWD,385,8,236.26,https://www.carspecs.us/photos/24251cd217c459be8a532a9a711218219452cfe4-2000.jpg
+339c4d32-f5ef-448e-8dd8-8fa44a99a57f,subaru,impreza awd,Subcompact,2001,Automatic,AWD,170,3,105.7,https://assets.shannons.com.au/R56700482HF4W3CA/KFPTDP9P91DC62S5/quo8s05ow0ayzqot-qujra1rgedmp3p95/jpg/2400x1800x3/vehicle/2001-subaru-impreza-wrx-awd.jpg
+12dbab2b-09d2-4c5c-b823-5a36c8ec32ec,subaru,impreza awd,Subcompact,2000,Automatic,AWD,303,7,36.39,https://images.classic.com/vehicles/36cf3ac067fe40bb9bc93269d93bb9198acde26c?w=672&h=576
+43dbeb0f-6212-4954-a358-9530e12319eb,subaru,wrx,Compact,2015,Manual,AWD,291,5,47.65,https://www.gannett-cdn.com/-mm-/db2d0c5ebeaea7a55bda36efadddb48ade08489d/c=4-0-1800-1015/local/-/media/WIGroup/Appleton/2014/07/14/1405373387000-2015-Subaru-WRX.jpg?width=3200&height=1680&fit=crop
+6c024b29-d33c-4643-a2db-8fd02506886f,subaru,impreza awd,Subcompact,2004,Automatic,AWD,163,2,75.49,https://i.ebayimg.com/00/s/MTIwMFgxNjAw/z/~RQAAOSwIXxfzC~E/$_32.JPG?set_id=880000500F
+3c64a42c-ef73-4b8f-a926-98f2e2fd75fe,subaru,impreza awd,Subcompact,1997,Manual,AWD,584,6,186.05,http://tenwheel.com/imgs/a/a/t/m/y/1997_subaru_impreza_coupe_awd_2___5_rs_jdm_wrx_sti_world_rally_blue_pearl_2_lgw.jpg
+b5e71c94-23c8-4f7f-bea7-bedef0b7b443,subaru,impreza,Subcompact,1995,Automatic,FWD,257,6,102.07,https://momentcar.com/images/subaru-impreza-1995-8.jpg
+af25cc61-a0b3-41ba-a7c9-5fd536828ddc,subaru,impreza awd,Subcompact,2002,Automatic,AWD,548,2,23.22,https://www.auto-data.net/images/f55/Subaru-Impreza-II-facelift-2002.jpg
+e743ef76-ff27-4642-902b-3318ec0b4ccf,subaru,legacy awd,Midsize,2024,Automatic,AWD,335,4,144.31,https://images.carprices.com/pricebooks_data/usa/colorized/2024/Subaru/View2/Legacy/Sport/RAG_K1X.png
+74831c5d-ac19-4a26-8a13-3d6cee03a54e,subaru,legacy awd,Compact,2009,Manual,AWD,315,7,128.73,https://www.groovecar.com/media/stock/images/stills/2009/subaru/legacy/awd-2-5i-special-edition-4dr-sedan-5m/2009-subaru-legacy-awd-2-5i-special-edition-4dr-sedan-5m-090-large.jpg
+ffca4dad-bdaa-4a72-aad3-e62e7345ed56,subaru,legacy awd,Compact,2008,Manual,AWD,652,6,42.48,http://static.cargurus.com/images/site/2008/01/15/13/15/2008_subaru_legacy_2_5_gt_spec_b-pic-24054.jpeg
+03a0e0df-f60d-4b6f-8c31-c13830a319e4,subaru,justy,Subcompact,1992,Manual,FWD,167,5,87.09,https://barnfinds.com/wp-content/uploads/2023/01/011423-1992-Subaru-Justy-1.jpg
+18e84e73-13e3-4729-b098-3fd2cfbb3cb1,subaru,impreza,Subcompact,1994,Automatic,FWD,495,3,44.75,https://www.supercars.net/blog/wp-content/uploads/2016/04/1994_Subaru_ImprezaWRXSTi1.jpg
+ac766acf-9aa0-40c5-90ad-d54ad9b8e238,subaru,justy,Subcompact,1991,Manual,FWD,587,7,90.75,"https://bringatrailer.com/wp-content/uploads/2019/12/1991_subaru_justy_1576266258e6376b6IMG_1618.jpg?fit=940,627"
+e4a7f034-ff9f-4f18-b4de-5c582347d550,subaru,wrx,Compact,2016,Manual,AWD,469,8,226.52,https://images.hgmsites.net/hug/2016-subaru_100516847_h.jpg
+005d849b-2a41-4865-8639-e757c5e08e72,subaru,ascent,Standard sport utility vehicle,2019,Automatic,AWD,156,4,276.88,https://hips.hearstapps.com/hmg-prod/images/2019-subaru-ascent-1545169097.jpg
+93047dcb-17f5-4272-a6da-e8f6caa472c2,subaru,impreza awd,Subcompact,1998,Automatic,AWD,661,8,187.11,https://assets.shannons.com.au/R83FFPC86E5I8E57/WK8BN768OCEA0E4/77nox67sr4uiq4ox/jpg/2400x1800x3/vehicle/1998-subaru-impreza-wrx-awd.jpg
+a0366a69-1565-44e8-8f62-c4d696cde214,subaru,forester awd,Small sport utility vehicle,2014,Manual,AWD,428,5,135.76,https://st.motortrend.com/uploads/sites/10/2015/09/2014-Subaru-Forester-XT-passengers-side-front-three-quarters-view-11.jpg
+3cffe90a-ab05-40f4-bcf2-76924c41c522,subaru,impreza awd,Subcompact,2005,Automatic,AWD,434,8,291.91,https://assets.shannons.com.au/DCWL37DW7QM9090V/V3F8S4IOC5ER636I/87iewns6u71b15cw/jpg/2400x1800x3/vehicle/2005-subaru-impreza-wrx-awd.jpg
+1c93b7db-40ee-4bc3-a857-e52d40888549,subaru,impreza awd,Subcompact,1999,Automatic,AWD,538,7,282.21,https://assets.shannons.com.au/images/VTD7DG8Q04P12508/D896F7ND0V3V2TIA/1078x809x3/1ve0llzc0be385qd-zv7fbhupsq3aq1sc.jpg
+3bbf58a4-4e50-458d-8c3e-639b4a174f57,subaru,forester awd,Small sport utility vehicle,2025,Automatic,AWD,175,8,86.71,https://www.conceptcarz.com/images/Subaru/2025-subaru-forester-suv-63-1280.jpg
+2a1a6e81-1d96-45b7-8625-d727efad204e,subaru,wrx,Compact,2018,Manual,AWD,266,7,235.52,http://luxurycarmagazine-28b0.kxcdn.com/wp-content/uploads/2017/06/Subaru-WRX-STI-2018-64.jpg
+1cbde232-6d09-4a42-b809-dd733f4b7a11,mazda,6,Midsize,2012,Automatic,FWD,564,4,64.99,https://images.hgmsites.net/lrg/2012-mazda-mazda6-4-door-sedan-auto-i-grand-touring-angular-rear-exterior-view_100373758_l.jpg
+ac5b40bd-04b4-48f1-b56c-979fa296ba40,mazda,mx-5 miata,Two seater,1995,Automatic,RWD,327,4,261.49,"https://media.carsandbids.com/cdn-cgi/image/width=2080,quality=70/360d4748cf103ccc8156a0d94596456ca0512c29/photos/KdbaONkL-reaGiKge7y-(edit).jpg?t=168261110377"
+08765467-6679-49e9-881b-54c632c9e8ce,mazda,mx-5 miata,Two seater,2005,Automatic,RWD,477,6,184.0,https://pictures.topspeed.com/IMG/crop/200511/2005-mazda-mx-5-miata-51_1600x0w.jpg
+e1334615-b754-41b1-bb5a-c5e4f734492b,mazda,cx-5 4wd,Small sport utility vehicle,2013,Automatic,4WD,643,5,229.49,
+b256f5fd-520f-4202-9643-de6808ba7a42,mazda,mx-5 miata,Two seater,2003,Automatic,RWD,342,2,67.81,"https://bringatrailer.com/wp-content/uploads/2020/11/2003_mazda_mx-5_miata_160928889161cf5d07fMIATA_BAT-02.jpg?fit=940,627"
+427ff677-19bb-4fcc-9ebe-468c367b4121,mazda,rx-7,Two seater,1991,Automatic,RWD,373,8,60.55,https://cdn.dealeraccelerate.com/ideal/1/1077/45638/1920x1440/1991-mazda-rx-7-convertible
+b55d7381-67c5-404a-a1c7-dde9e5a3e4e3,mazda,mx-5 miata,Two seater,1994,Automatic,RWD,383,2,178.54,"https://bringatrailer.com/wp-content/uploads/2023/01/1994_mazda_mx-5-miata_1994_mazda_mx-5-miata_90cc76f7-5f1d-4322-a9d3-805178998e04-f2BbKn-23643-23644-scaled.jpg?fit=940,627"
+398b21fc-bfa0-4fcb-a402-5fcb9f03e383,mazda,mx-5 miata,Two seater,1999,Automatic,RWD,151,8,146.52,http://st.automobilemag.com/uploads/sites/11/2014/08/Mazda-MX-5-Miata-second-generation-front-view.jpg
+25904063-803b-444b-8c38-50a661c4cb42,mazda,cx-50 4wd,Small sport utility vehicle,2023,Automatic,4WD,309,6,217.33,https://images.hgmsites.net/hug/2023-mazda-mazda-cx-50_100815182_h.jpg
+571615df-9a9b-4048-b6a8-086e5916b847,mazda,3 4-door 4wd,Compact,2020,Automatic,4WD,518,4,186.69,https://23b67922729ee23bc3b9-121fe08775f244d28dc63aed96992806.ssl.cf1.rackcdn.com/3MZBPADL5LM116601/e962772af4c33dc7209d931994bac2cf.jpg
+555d261d-6573-4324-be53-4f41e0f30cb0,mazda,mx-5 miata,Two seater,1997,Automatic,RWD,694,6,266.54,"https://media.carsandbids.com/cdn-cgi/image/width=2080,quality=70/da4b9237bacccdf19c0760cab7aec4a8359010b0/photos/ZKEM8w0xnDf2.3Lp2xFoJN.jpg?t=161050900946"
+5ec15b19-b00c-40ed-b734-a6127ca1923a,mazda,mx-5 miata,Two seater,1996,Automatic,RWD,257,3,126.81,http://momentcar.com/images/mazda-mx5-miata-1996-9.jpg
+5ee088a3-4005-478b-9ca7-89aba665ce62,mazda,rx-8,Subcompact,2009,Manual,RWD,466,7,212.69,https://pictures.topspeed.com/IMG/jpg/200801/2009-mazda-rx-8-11.jpg
+99fb9506-23e1-4594-ae54-6f80f02f74b8,mazda,cx-3 2wd,Compact,2017,Automatic,FWD,426,4,185.12,http://s3.caradvice.com.au/wp-content/uploads/2017/01/2017-mazda-cx3-s-touring-38.jpg
+05c804e5-b678-4292-a398-1e8abceb556b,mazda,mx-5,Two seater,2006,Manual,RWD,208,4,274.43,https://pictures.topspeed.com/IMG/jpg/200609/2006-mazda-mx-5-miata-9.jpg
+ffbea283-db1c-4381-b5bf-2909735d3df2,mazda,3,Compact,2010,Manual,FWD,574,4,127.78,https://www.carspecs.us/photos/cb4b12becbfff8e4763286c72d73cd7f53aba3bc-2000.jpg
+e1b49306-1e1e-462d-87d0-4a9c5ff9492a,mazda,mx-5 miata,Two seater,2000,Automatic,RWD,458,4,85.9,https://bringatrailer.com/wp-content/uploads/2020/11/1605036572770bf61246cTRS_2410-e1607006665381.jpg
+a5cba6db-5053-4db4-a9f5-71cc05878161,mazda,tribute fwd,Sport utility vehicle,2008,Automatic,FWD,217,2,211.8,http://img.scgpix.com/listimg/img1_0117/23/img_iCYnirnoO6azQu8.jpg
+66940679-29f0-4faa-be30-8ea401f2dbd7,mazda,cx-90 4wd,Standard sport utility vehicle,2024,Automatic,4WD,267,5,157.59,https://media.ed.edmunds-media.com/mazda/cx-90/2024/oem/2024_mazda_cx-90_4dr-suv_33-turbo-s-premium-plus_fq_oem_1_600.jpg
+79e06d6f-5f34-4111-bf53-8a9f0bd6c308,mazda,mx-5 miata,Two seater,2001,Automatic,RWD,82,8,278.23,https://cdn.dealeraccelerate.com/ab/1/1312/56674/1920x1440/2001-mazda-mx-5-miata-ls
+ab92e25d-e166-45b3-b7c6-30a175d23c2e,mazda,mx-5 miata,Two seater,2004,Automatic,RWD,182,5,126.02,https://bringatrailer.com/wp-content/uploads/2021/03/2004_mazda_mx-5_miata_1615838530c2522fcb1f210502014-exterior-2004_Mazda_MX-5_Miata_20210307174.jpg
+e4f6fa1f-e6ca-4823-9b98-970b614e77e9,mazda,cx-30 2wd,Small sport utility vehicle,2021,Automatic,FWD,283,2,229.99,https://www.autotrader.com/wp-content/uploads/2020/07/2021-mazda-cx-30-rear-left-side.jpg
+2da5144b-4623-40c8-a539-392c2cf5a5e8,mazda,mx-5,Two seater,2011,Manual,RWD,695,7,180.77,https://momentcar.com/images/mazda-mx5-miata-2011-3.jpg
+2270c408-ceee-45e3-8d9c-5187001a4656,mazda,mx-30,Midsize,2022,Automatic,FWD,88,8,116.92,https://i.gaw.to/content/photos/49/02/490253-mazda-mx-30-2022-une-vocation-urbaine-avant-tout.jpeg
+866f1a83-f703-4bf4-9df6-d0b2fd083b9f,mazda,cx-3 2wd,Compact,2019,Automatic,FWD,381,7,204.91,https://s1.cdn.autoevolution.com/images/news/gallery/2019-mazda-cx-3-priced-at-20390-promises-more-of-everything_1.jpg
+48389082-1f5f-4aab-a718-01e0b026db27,mazda,6,Midsize,2016,Automatic,FWD,208,8,139.34,http://s3.caradvice.com.au/wp-content/uploads/2016/02/Mazda-6-GT-CA.jpg
+09f35f8f-e287-4a75-bfda-84209201c588,mazda,mx-5 miata,Two seater,2002,Automatic,RWD,675,5,84.29,https://www.motorcarclassics.com/galleria_images/530/530_main_l.jpg
+21629def-90ab-4322-9e95-7760cfb00eb3,mazda,millenia,Compact,1998,Automatic,FWD,155,2,100.56,https://www.carspecs.us/photos/6af435d55f668e494011e6bc82ba3470e3bb4f8c-2000.jpg
+de3c93e2-8e08-4f2c-9fe4-c0941d97a6d4,mazda,mx-5 miata,Two seater,1992,Automatic,RWD,426,7,141.92,http://momentcar.com/images/mazda-mx5-miata-1992-8.jpg
+fa282d82-9fcf-4647-80e2-23d225721919,mazda,b2300 2wd,Standard pickup truck,2007,Automatic,RWD,375,7,213.22,https://cdn.jdpower.com/Models/400x200/2007-Mazda-B-Series2WDTruck-Base.jpg
+2b06527a-c383-4d2e-86a3-5cb5737ba799,lexus,sc 430,Minicompact,2006,Automatic,RWD,425,3,55.7,https://pictures.topspeed.com/IMG/crop/200608/2006-lexus-sc-430-4_1600x0w.jpg
+78667865-c6ef-467d-9aa9-4e3ff698c443,lexus,ls 600h l,Midsize,2008,Automatic,AWD,333,4,57.14,http://pictures.topspeed.com/IMG/jpg/200704/2008-lexus-ls-600h-l-42.jpg
+8680b9f0-29d7-4d6c-83bf-93631a55db52,lexus,is 300,Subcompact,2001,Automatic,RWD,657,8,213.14,https://pictures.topspeed.com/IMG/crop/200511/2001-lexus-is-300-15_1600x0w.jpg
+041b249c-fdf4-401c-a4b6-7ed8a448d32e,lexus,sc 300/sc 400,Subcompact,1992,Automatic,RWD,422,6,239.9,http://consumerguide.com/wp-content/uploads/2014/07/94806041990001.jpg
+e8a2114d-1320-4662-8680-9fc658f0467f,lexus,sc 300/sc 430,Minicompact,2002,Automatic,RWD,484,7,50.81,https://www.carspecs.us/photos/3cf27a98cae7ee1cc6a2d6854feda4626a0b7d87-2000.jpg
+5b1f3fd1-4fee-48f0-87f5-3a444296cea6,lexus,sc 300/sc 400,Subcompact,1994,Automatic,RWD,552,4,285.51,https://momentcar.com/images/lexus-sc-300-1994-8.jpg
+4ed9efe3-f360-4671-a226-8213fbeea6e2,lexus,lfa,Two seater,2012,Automatic,RWD,368,6,128.1,http://www.hdcarwallpapers.com/walls/2012_lexus_lfa-wide.jpg
+abe0bfdd-f4b9-4d77-94e7-d8528134523f,lexus,es 250,Compact,1991,Automatic,FWD,362,7,112.39,https://www.autodetective.com/uploads/photos/lexus/es+250/1991/275800.jpg
+b096109e-1f17-4e00-a274-68dc53635bd1,lexus,sc,Subcompact,1999,Automatic,RWD,666,2,156.88,https://cdn.dealeraccelerate.com/sevenhills/1/126/22007/1920x1440/1999-lexus-sc400
+b61f0178-b6f9-4f8b-9225-02fff752aad0,lexus,lc 500h,Subcompact,2018,Automatic,RWD,541,5,85.85,https://cimg3.ibsrv.net/ibimg/hgm/1920x1080-1/100/545/2018-lexus-lc_100545635.jpg
+c576019b-4f32-4852-80aa-99a86b83b5c2,lexus,gs 350,Midsize,2013,Automatic,RWD,131,3,279.88,https://www.carsinvasion.com/gallery/2013-lexus-gs-350/2013-lexus-gs-350-08.jpg
+821fac5b-0516-4088-94a1-9ff6271808a0,lexus,sc 300/sc 400,Subcompact,1996,Automatic,RWD,402,8,248.72,https://momentcar.com/images/lexus-sc-400-1996-2.jpg
+17fb3d2c-3528-495d-979f-93b86ac343da,lexus,is 250/is 250c,Subcompact,2011,Automatic,RWD,539,5,295.2,https://images.hgmsites.net/hug/2011-lexus-is-250-4-door-sport-sedan-auto-awd-angular-front-exterior-view_100344177_h.jpg
+bff6ffa5-bdea-4d87-a762-59dac6ae099c,lexus,sc,Subcompact,2000,Automatic,RWD,598,4,199.82,"https://media.carsandbids.com/cdn-cgi/image/width=2080,quality=70/da6e8a1d4896127a9d2adf83461993b45339474c/photos/KP7Qqovo-7oY-BxTTt4m.LN0rJ-B_2.jpeg?t=162394973355"
+84910651-24e1-47d1-a75c-4b63e451d420,lexus,ux 250h,Compact,2023,Automatic,FWD,507,5,225.68,https://images.carexpert.com.au/resize/3000/-/app/uploads/2023/01/2023-Lexus-UX250h-Luxury-EP-24-DSC08732.jpg
+ee7ba478-2a3e-4007-83b0-d727b2baf0bf,lexus,nx 250,Small sport utility vehicle,2024,Automatic,FWD,152,6,296.88,https://images.carexpert.com.au/crop/1200/630/app/uploads/2024/07/2024-Lexus-NX-250-HERO-16x9-1-1.jpg
+156e7de8-aa54-4061-b10e-6af79b144b8c,lexus,sc 430,Minicompact,2004,Automatic,RWD,378,5,131.89,http://static.cargurus.com/images/site/2014/08/20/21/33/2004_lexus_sc_430_base-pic-2900473945874342285.jpeg
+4c7418f6-44b4-4c9e-b91c-08421efb1ec4,lexus,sc 300/sc 400,Subcompact,1995,Automatic,RWD,463,5,251.67,https://media.ed.edmunds-media.com/lexus/sc-300/1995/oem/1995_lexus_sc-300_coupe_base_fq_oem_1_500.jpg
+3dd13139-76e9-4e16-9d1e-92b101f380c7,lexus,sc 300/sc 400,Subcompact,1998,Automatic,RWD,303,8,102.11,http://momentcar.com/images/lexus-sc-400-1998-12.jpg
+e3d96194-1ca1-4447-ba3c-1b4836f8906f,lexus,gs 450h,Compact,2007,Automatic,RWD,538,2,143.4,http://pictures.topspeed.com/IMG/crop/200608/2007-lexus-gs-450h-26_1600x0w.jpg
+c15933ed-5a2b-43e8-9b0d-ba7bccd3deaa,lexus,sc 300/sc 430,Minicompact,2003,Automatic,RWD,251,3,162.72,http://momentcar.com/images/lexus-sc-430-2003-3.jpg
+58ad9d1a-07c6-4406-856f-ef2ca64bcf48,lexus,rx 350,Small sport utility vehicle,2015,Automatic,FWD,649,5,52.29,https://media.ed.edmunds-media.com/lexus/rx-350/2015/oem/2015_lexus_rx-350_4dr-suv_base_fq_oem_2_1280.jpg
+dddb5fa8-613d-480d-95bd-c04f7d91b119,lexus,es 300h,Midsize,2016,Automatic,FWD,328,4,164.02,https://tflcar.com/wp-content/uploads/2016/09/2016_Lexus_ES_300h_003.jpg
+9473ab3c-aa90-41d7-bf6c-fd7b35e951c3,lexus,rc f,Subcompact,2020,Automatic,RWD,219,2,20.6,https://www.hdcarwallpapers.com/walls/2020_lexus_rc_f_track_edition_4k-HD.jpg
+1a720ec6-0c3f-478e-986b-03882ef09f1a,lexus,ct 200h,Compact,2017,Automatic,FWD,366,4,105.91,https://www.hdcarwallpapers.com/walls/lexus_ct_200h_2017-HD.jpg
+dfc09bc0-92b9-4948-aa30-4af4c1f326ff,lexus,rx 350 l,Small sport utility vehicle,2022,Automatic,FWD,389,7,91.06,https://www.belairlexus.com/wp-content/uploads/2020/01/lexus-2022-rx350l-luxury-7-pass-nightfall-mica-x.jpg
+77b10942-d1fe-499a-8a67-6a44f52336ac,lexus,sc 430,Minicompact,2005,Automatic,RWD,318,5,266.05,https://cdn.dealeraccelerate.com/pedigree/1/1379/25970/1920x1440/2005-lexus-sc-430-2dr-convertible
+82e78582-36a2-463c-b581-7c7362784e82,lexus,is 250/is 250c,Subcompact,2010,Manual,RWD,344,4,270.59,https://st.automobilemag.com/uploads/sites/10/2015/11/2010-lexus-is-250c-convertible-angular-front.png
+64cac0bd-d6da-4e5e-86c7-7b1e83d933d9,lexus,ls 400,Midsize,1993,Automatic,RWD,157,6,82.16,http://momentcar.com/images/lexus-ls-400-1993-10.jpg
+bf7e78d4-4600-436d-9698-b2ae2b509821,lexus,is 350,Compact,2014,Automatic,RWD,178,8,235.32,https://lexusenthusiast.com/images/weblog/2014-IS-350-025.jpg
+891c5782-ac5d-4e9a-a3c2-6882b2009db1,volvo,xc90 awd,Standard sport utility vehicle,2016,Automatic,AWD,521,6,130.71,https://s1.cdn.autoevolution.com/images/news/2016-volvo-xc90-awd-gets-22-mpg-rating-from-epa-94261_1.jpg
+2dcbdc4a-b8e5-46da-97ff-1d5f90922d41,volvo,s40 awd,Compact,2005,Manual,AWD,165,6,258.35,http://static.cargurus.com/images/site/2013/09/03/11/21/2005_volvo_s40_t5_awd-pic-4226693988436800399.jpeg
+e9778e98-9e19-4f3b-9c88-f69ee24216ba,volvo,s60 fwd,Compact,2021,Automatic,FWD,97,3,225.77,https://www.autotrader.com/wp-content/uploads/2020/08/2021-volvo-s60-rear-left-side.jpg
+8feb2d76-b0e7-46bb-9b3e-ed374c198674,volvo,xc90 awd,Standard sport utility vehicle,2017,Automatic,AWD,272,4,61.73,http://pictures.topspeed.com/IMG/crop/201703/volvo-xc90-t6-awd-in-8_1280x0w.jpg
+c4c703a9-93ab-405a-b1ff-5f86253c384c,volvo,c70 convertible,Subcompact,1998,Automatic,FWD,186,8,114.16,http://www.carpixel.net/w/06acc5256b8e09525227b0c53c42bfa5/volvo-c70-convertible-wallpaper-hd-31576.jpg
+f85c5a4e-d139-4a9e-8629-a45b36ef65ef,volvo,c70 convertible,Subcompact,2009,Manual,FWD,159,8,118.95,https://images.classic.com/vehicles/1e2df6f75d2b5da4d94d69b72a4a16363dfb8d12.jpg?auto=format&fit=crop&ar=16:9
+570abece-c9c3-4065-bb72-2f73e23325ad,volvo,xc90 fwd,Standard sport utility vehicle,2013,Automatic,FWD,202,3,236.32,https://images.hgmsites.net/med/2013-volvo-xc90-fwd-4-door-angular-front-exterior-view_100389247_m.jpg
+a949d5a0-8f93-4acd-9395-1fe2fabb573b,volvo,c70 convertible,Subcompact,2004,Automatic,FWD,609,2,225.95,https://lh3.googleusercontent.com/-kL01ub5x2-g/UO-IcSUG-MI/AAAAAAAAG3U/YDvC4td66nki4S1_qDHfeo0QDK5ndm1DgCCoYBhgL/s1600/2004-volvo-c70-convertible-00004.jpg
+399c117c-82cd-448c-86dc-5ffb4e4358a0,volvo,960,Compact,1996,Automatic,RWD,287,6,259.48,http://momentcar.com/images/volvo-960-1996-1.jpg
+d6aa4629-cfa9-42a6-92a9-66b94be849e9,volvo,c70 convertible,Subcompact,2001,Automatic,FWD,372,2,232.19,https://media.ed.edmunds-media.com/volvo/c70/2001/oem/2001_volvo_c70_convertible_ht_fq_oem_2_500.jpg
+3ab82929-1079-4ff8-888c-7409cf76ed1f,volvo,s40 awd,Compact,2006,Manual,AWD,105,5,169.73,http://images.gtcarlot.com/pictures/47553364.jpg
+2f90ac14-49bf-42da-8121-8ab4d65d4065,volvo,s60 awd,Compact,2014,Automatic,AWD,317,2,149.8,http://tractionlife.com/wp-content/uploads/2014/02/VolvoS60_Frontal2.jpg
+ab1bc5e3-7ea3-4125-a48a-77c6b497ef5e,volvo,xc60 awd,Sport utility vehicle,2010,Automatic,AWD,649,6,160.5,https://www.groovecar.com/media/stock/images/stills/2010/volvo/xc60/awd-t6-4dr-suv/2010-volvo-xc60-awd-t6-4dr-suv-048-large.jpg
+7dc6e006-371c-49b5-aaf8-1a4e23f64338,volvo,s60 b5,Compact,2022,Automatic,FWD,150,8,69.41,https://www.exhaustnotes.com.au/wp-content/uploads/2022/06/S60-Rear-34.png
+ac2420c3-6c1c-4d74-85b4-73969019054a,volvo,c70 convertible,Subcompact,2003,Automatic,FWD,310,5,93.01,https://www.mycarspecs.com/static/gallery_img/2003-volvo-c70-1.jpg
+bcc1e308-c87f-4eae-a9f3-17e2875c9e3e,volvo,s60 awd,Compact,2015,Automatic,AWD,593,6,177.69,http://static.cargurus.com/images/site/2014/04/14/17/49/2015_volvo_s60-pic-4412718575183050851.jpeg
+b7bc4a18-5be5-42c1-aaff-c14e263f3995,volvo,240,Compact,1993,Automatic,RWD,590,6,284.19,https://bringatrailer.com/wp-content/uploads/2023/07/1993_volvo_240-dl-sedan_f6178c33-ce01-4f9d-9c77-6a2987bc7872-78244.jpeg
+738dc5a6-5164-47dd-8e71-c1e4b62bbece,volvo,c70 convertible,Subcompact,1999,Automatic,FWD,429,7,296.49,"https://bringatrailer.com/wp-content/uploads/2023/06/1999_volvo_c70_8f7022b1-91a6-438e-9a89-ae96e4ac5cbf-53657.jpeg?fit=940,627"
+e4029dba-2abc-4439-a763-6a80da15e783,volvo,960,Compact,1995,Automatic,RWD,700,2,69.94,http://momentcar.com/images/volvo-960-1995-2.jpg
+90699ef0-19c2-4a8e-9969-bd41ddf71a8b,volvo,c70 convertible,Subcompact,2008,Manual,FWD,659,5,121.3,https://cdn.dealeraccelerate.com/cam/34/2352/112439/1920x1440/2008-volvo-c70-convertible
+7b7bb970-1dce-42bf-a1e1-81d685277662,volvo,c70 convertible,Subcompact,2002,Automatic,FWD,457,5,238.98,https://www.carpixel.net/w/179336b4500cb17f53e083a6ff76d09b/volvo-c70-convertible-wallpaper-hd-31469.jpg
+0b7ef96f-5bad-4944-a38f-a281c47af256,volvo,850,Midsize,1994,Automatic,FWD,475,7,145.38,https://www.carpixel.net/w/4650191ec26dfd7e4f7d9bd30755f478/volvo-850-turbo-kombi-wallpaper-hd-31553.jpg
+20d395ec-1a53-4d40-8e33-6381770165ff,volvo,c70 convertible,Subcompact,2000,Automatic,FWD,507,5,127.94,http://images.gtcarlot.com/pictures/9174147.jpg
+d17af033-9178-4d12-aa51-651bc7608e42,volvo,s60 polestar awd,Compact,2018,Automatic,AWD,675,3,124.69,https://0b38966e54e8bebf4a9b-c91cf87d0ed24f4939ca44173a86a2bc.ssl.cf1.rackcdn.com/YV1A0MTW3J2453220/dde425b2258ecf212dbafe10840fcc73.jpg
+c904e6c6-1e3a-4860-bf49-1ef5f87df450,volvo,s60 fwd,Compact,2020,Automatic,FWD,215,7,251.46,https://i.gaw.to/vehicles/photos/40/22/402227-2020-volvo-s60.jpg?1024x640
+569b8585-ecb3-482b-8fd7-da7ba84ac7da,volvo,c70 convertible,Subcompact,2007,Manual,FWD,242,4,69.21,http://st.automobilemag.com/uploads/sites/10/2015/11/2007-volvo-c70-t5-convertible-angular-front.png
+a755a0b6-8ec2-497f-9d6a-1cee1bb241f3,volvo,coupe,Compact,1991,Automatic,RWD,682,2,139.5,https://momentcar.com/images/volvo-coupe-1991-2.jpg
+a950f7a9-41bf-4714-8275-5f8eddb7cc0c,volvo,xc40 awd,Small sport utility vehicle,2019,Automatic,AWD,620,2,268.93,http://st.automobilemag.com/uploads/sites/11/2017/12/2019-Volvo-XC40-12.jpg
+00f866cc-13ab-4c3e-a37b-2b45574ef607,volvo,960/s90,Compact,1997,Automatic,RWD,93,6,296.44,https://uploads.carandclassic.co.uk/uploads/cars/volvo/11563250.jpg
+28192a08-3e2f-4ec4-a2f1-b370a19b0f9b,volvo,s60 b5,Compact,2023,Automatic,FWD,656,5,268.87,https://s3.us-east-2.amazonaws.com/dealer-inspire-vps-vehicle-images/cf4e-18003522/7JRL12TX5PG227167/454974b51e2e97e8e15a3d9c75c40da9.jpeg
